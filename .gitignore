@@ -1,0 +1,21 @@
+# Build artifacts
+*.o
+*.bin
+*.elf
+*.iso
+*.img
+
+# Build directories
+build/
+
+# GRUB iso staging
+isodir/
+
+# Editor
+.vscode/
+*.swp
+*~
+
+# Cross-compiler (lives in ~/opt/cross, not in repo)
+opt/
+src/
