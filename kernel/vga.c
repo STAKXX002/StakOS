@@ -40,6 +40,12 @@ void vga_set_color(uint8_t fg) {
 }
 
 void vga_putchar(char c) {
+    if (c == '\b') {
+        if (vga_col > 0) vga_col--;
+        else if (vga_row > 0) { vga_row--; vga_col = VGA_COLS - 1; }
+        vga_buf[vga_row * VGA_COLS + vga_col] = vga_make_entry(' ', vga_color);
+        return;
+    }
     if (c == '\n') {
         vga_col = 0;
         if (++vga_row == VGA_ROWS) vga_scroll();
@@ -85,3 +91,6 @@ void kpanic(const char* msg, const char* detail) {
     kprint("\n--- System Halted ---\n");
     __asm__ volatile("cli; hlt");
 }
+
+uint8_t vga_get_col(void) { return (uint8_t)vga_col; }
+uint8_t vga_get_row(void) { return (uint8_t)vga_row; }

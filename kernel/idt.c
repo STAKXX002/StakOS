@@ -9,7 +9,6 @@ static idt_ptr_t   idt_ptr;
 
 extern void idt_flush(uint32_t);
 
-/* ISR stubs declared in isr.asm */
 extern void isr0(void);  extern void isr1(void);  extern void isr2(void);
 extern void isr3(void);  extern void isr4(void);  extern void isr5(void);
 extern void isr6(void);  extern void isr7(void);  extern void isr8(void);
@@ -22,7 +21,6 @@ extern void isr24(void); extern void isr25(void); extern void isr26(void);
 extern void isr27(void); extern void isr28(void); extern void isr29(void);
 extern void isr30(void); extern void isr31(void);
 
-/* IRQ stubs */
 extern void irq0(void);  extern void irq1(void);  extern void irq2(void);
 extern void irq3(void);  extern void irq4(void);  extern void irq5(void);
 extern void irq6(void);  extern void irq7(void);  extern void irq8(void);
@@ -30,7 +28,6 @@ extern void irq9(void);  extern void irq10(void); extern void irq11(void);
 extern void irq12(void); extern void irq13(void); extern void irq14(void);
 extern void irq15(void);
 
-/* PIC ports */
 #define PIC1_CMD  0x20
 #define PIC1_DATA 0x21
 #define PIC2_CMD  0xA0
@@ -46,22 +43,25 @@ static inline uint8_t inb(uint16_t port) {
     return ret;
 }
 
+/* IRQ dispatch table - declared before irq_handler */
+typedef void (*irq_handler_t)(registers_t*);
+static irq_handler_t irq_handlers[16] = {0};
+
+void irq_register(uint8_t irq, irq_handler_t handler) {
+    if (irq < 16) irq_handlers[irq] = handler;
+}
+
 static void pic_remap(void) {
-    /* Save masks */
     uint8_t m1 = inb(PIC1_DATA);
     uint8_t m2 = inb(PIC2_DATA);
-
-    /* Initialize both PICs */
-    outb(PIC1_CMD,  0x11); /* ICW1: init + ICW4 needed */
+    outb(PIC1_CMD,  0x11);
     outb(PIC2_CMD,  0x11);
-    outb(PIC1_DATA, 0x20); /* ICW2: IRQ0 -> vector 32  */
-    outb(PIC2_DATA, 0x28); /* ICW2: IRQ8 -> vector 40  */
-    outb(PIC1_DATA, 0x04); /* ICW3: slave on IRQ2       */
-    outb(PIC2_DATA, 0x02); /* ICW3: cascade identity    */
-    outb(PIC1_DATA, 0x01); /* ICW4: 8086 mode           */
+    outb(PIC1_DATA, 0x20);
+    outb(PIC2_DATA, 0x28);
+    outb(PIC1_DATA, 0x04);
+    outb(PIC2_DATA, 0x02);
+    outb(PIC1_DATA, 0x01);
     outb(PIC2_DATA, 0x01);
-
-    /* Restore masks */
     outb(PIC1_DATA, m1);
     outb(PIC2_DATA, m2);
 }
@@ -74,24 +74,22 @@ static void idt_set_gate(uint8_t n, uint32_t base, uint16_t sel, uint8_t flags) 
     idt[n].flags     = flags;
 }
 
-/* Exception messages */
 static const char* exceptions[] = {
-    "Division By Zero",        "Debug",
-    "Non Maskable Interrupt",  "Breakpoint",
-    "Into Detected Overflow",  "Out of Bounds",
-    "Invalid Opcode",          "No Coprocessor",
-    "Double Fault",            "Coprocessor Segment Overrun",
-    "Bad TSS",                 "Segment Not Present",
-    "Stack Fault",             "General Protection Fault",
-    "Page Fault",              "Unknown Interrupt",
-    "Coprocessor Fault",       "Alignment Check",
-    "Machine Check",           "Reserved",
+    "Division By Zero",       "Debug",
+    "Non Maskable Interrupt", "Breakpoint",
+    "Overflow",               "Out of Bounds",
+    "Invalid Opcode",         "No Coprocessor",
+    "Double Fault",           "Coprocessor Segment Overrun",
+    "Bad TSS",                "Segment Not Present",
+    "Stack Fault",            "General Protection Fault",
+    "Page Fault",             "Unknown Interrupt",
+    "Coprocessor Fault",      "Alignment Check",
+    "Machine Check",          "Reserved",
     "Reserved", "Reserved", "Reserved", "Reserved",
     "Reserved", "Reserved", "Reserved", "Reserved",
     "Reserved", "Reserved", "Reserved", "Reserved"
 };
 
-/* Called from isr.asm after registers are saved */
 void isr_handler(registers_t* r) {
     vga_set_color(VGA_COLOR_YELLOW);
     kprint("ISR HIT: ");
@@ -100,28 +98,25 @@ void isr_handler(registers_t* r) {
     kpanic("EXCEPTION: ", exceptions[r->int_no]);
 }
 
-/* Called from isr.asm for hardware IRQs */
 void irq_handler(registers_t* r) {
-    /* Send End-Of-Interrupt to PIC */
     if (r->int_no >= 40)
-        outb(PIC2_CMD, 0x20); /* EOI to slave if IRQ8-15 */
-    outb(PIC1_CMD, 0x20);     /* EOI to master always    */
+        outb(PIC2_CMD, 0x20);
+    outb(PIC1_CMD, 0x20);
 
-    /* Dispatch to registered handlers (keyboard etc) */
-    (void)r; /* placeholder until we add handler table */
+    uint8_t irq = r->int_no - 32;
+    if (irq < 16 && irq_handlers[irq])
+        irq_handlers[irq](r);
 }
 
 void idt_init(void) {
     idt_ptr.limit = (sizeof(idt_entry_t) * IDT_ENTRIES) - 1;
     idt_ptr.base  = (uint32_t)&idt;
 
-    /* Zero the whole table first */
     uint8_t* p = (uint8_t*)idt;
     for (int i = 0; i < (int)sizeof(idt); i++) p[i] = 0;
 
     pic_remap();
 
-    /* Install exception handlers (ISRs 0-31) */
     idt_set_gate(0,  (uint32_t)isr0,  0x08, 0x8E);
     idt_set_gate(1,  (uint32_t)isr1,  0x08, 0x8E);
     idt_set_gate(2,  (uint32_t)isr2,  0x08, 0x8E);
@@ -155,7 +150,6 @@ void idt_init(void) {
     idt_set_gate(30, (uint32_t)isr30, 0x08, 0x8E);
     idt_set_gate(31, (uint32_t)isr31, 0x08, 0x8E);
 
-    /* Install IRQ handlers (vectors 32-47) */
     idt_set_gate(32, (uint32_t)irq0,  0x08, 0x8E);
     idt_set_gate(33, (uint32_t)irq1,  0x08, 0x8E);
     idt_set_gate(34, (uint32_t)irq2,  0x08, 0x8E);
@@ -174,7 +168,5 @@ void idt_init(void) {
     idt_set_gate(47, (uint32_t)irq15, 0x08, 0x8E);
 
     idt_flush((uint32_t)&idt_ptr);
-
-    /* Enable interrupts */
     __asm__ volatile("sti");
 }

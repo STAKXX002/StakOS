@@ -30,3 +30,6 @@ void kprint_int(int32_t val);
 void kpanic(const char* msg, const char* detail);
 
 #endif
+
+uint8_t vga_get_col(void);
+uint8_t vga_get_row(void);
