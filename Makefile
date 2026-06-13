@@ -9,8 +9,8 @@ ASFLAGS = -f elf32
 LDFLAGS = -ffreestanding -O2 -nostdlib -T linker.ld
 
 # Sources
-C_SRCS  = kernel/kernel.c
-ASM_SRCS = boot/boot.asm
+C_SRCS  = kernel/kernel.c kernel/gdt.c
+ASM_SRCS = boot/boot.asm boot/gdt_flush.asm
 
 # Objects
 C_OBJS   = $(C_SRCS:.c=.o)

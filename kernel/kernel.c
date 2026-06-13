@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stddef.h>
+#include "gdt.h"
 
 /* VGA text mode buffer */
 #define VGA_ADDRESS     0xB8000
@@ -69,6 +70,7 @@ static void kprint(const char* str) {
 
 /* ── Kernel entry point ─────────────────────────────────────── */
 void kernel_main(void) {
+    gdt_init();
     vga_clear();
 
     vga_set_color(VGA_COLOR_LIGHT_CYAN);
