@@ -20,4 +20,7 @@ SECTIONS {
         *(COMMON)
         *(.bss)
     }
+
+    /* Exported symbols for the PMM - physical end of the kernel image */
+    _kernel_end = .;
 }
