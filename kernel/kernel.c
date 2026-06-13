@@ -1,9 +1,13 @@
 #include "vga.h"
 #include "gdt.h"
 #include "idt.h"
+#include "pmm.h"
+#include "paging.h"
 #include "../drivers/keyboard.h"
 
-void kernel_main(void) {
+#define MULTIBOOT2_MAGIC 0x36D76289
+
+void kernel_main(uint32_t magic, uint32_t mboot_ptr) {
     vga_init();
     gdt_init();
     idt_init();
@@ -22,6 +26,17 @@ void kernel_main(void) {
     kprint("[OK] PIC remapped\n");
     kprint("[OK] Interrupts enabled\n");
     kprint("[OK] Keyboard initialized\n");
+
+    /* Validate Multiboot2 magic before touching the info structure */
+    if (magic != MULTIBOOT2_MAGIC) {
+        kpanic("Not booted by a Multiboot2 bootloader!", "");
+        return;
+    }
+
+    /* Stage 3: memory management */
+    pmm_init(mboot_ptr);
+    pmm_print_stats();
+    paging_init();
 
     vga_set_color(VGA_COLOR_LIGHT_GREY);
     kprint("\nReady.\n");

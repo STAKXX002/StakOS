@@ -30,6 +30,13 @@ _start:
     ; Set up the stack pointer
     mov esp, stack_top
 
+    ; ebx = physical address of Multiboot2 info structure (set by GRUB)
+    ; eax = Multiboot2 magic number (0x36D76289)
+    ; We must capture these NOW before any C function call can clobber ebx.
+    ; Pass them as arguments: kernel_main(uint32_t magic, uint32_t mboot_ptr)
+    push ebx    ; arg2: multiboot2 info pointer
+    push eax    ; arg1: magic number
+
     ; Call our C kernel entry point
     extern kernel_main
     call kernel_main
