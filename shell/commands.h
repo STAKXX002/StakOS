@@ -17,11 +17,13 @@ typedef struct {
 extern const command_t commands[];
 
 /* Individual command implementations */
-void cmd_help    (int argc, char** argv);
-void cmd_clear   (int argc, char** argv);
-void cmd_echo    (int argc, char** argv);
-void cmd_meminfo (int argc, char** argv);
-void cmd_memtest (int argc, char** argv);
-void cmd_hexdump (int argc, char** argv);
+void cmd_help     (int argc, char** argv);
+void cmd_clear    (int argc, char** argv);
+void cmd_echo     (int argc, char** argv);
+void cmd_meminfo  (int argc, char** argv);
+void cmd_memtest  (int argc, char** argv);
+void cmd_hexdump  (int argc, char** argv);
+void cmd_heapinfo (int argc, char** argv);
+void cmd_heaptest (int argc, char** argv);
 
 #endif

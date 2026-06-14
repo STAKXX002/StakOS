@@ -194,14 +194,77 @@ void cmd_hexdump(int argc, char** argv) {
     vga_set_color(VGA_COLOR_LIGHT_GREY);
 }
 
+/* command table defined at bottom of file after all implementations */
+
+/* ---- heapinfo ---- */
+
+#include "../mm/kmalloc.h"
+
+void cmd_heapinfo(int argc, char** argv) {
+    (void)argc; (void)argv;
+    kmalloc_print_stats();
+}
+
+/* ---- heaptest ---- */
+
+/*
+ * Allocates several chunks of different sizes, prints their addresses,
+ * then frees them and shows that the heap coalesces back to its original state.
+ */
+void cmd_heaptest(int argc, char** argv) {
+    (void)argc; (void)argv;
+
+    vga_set_color(VGA_COLOR_LIGHT_CYAN);
+    kprint("heaptest: allocating chunks\n");
+    vga_set_color(VGA_COLOR_LIGHT_GREY);
+
+    void* a = kmalloc(32);
+    void* b = kmalloc(128);
+    void* c = kmalloc(64);
+    void* d = kmalloc(256);
+
+    kprint("  kmalloc(32)  = 0x"); kprint_hex((uint32_t)(uintptr_t)a); kprint("\n");
+    kprint("  kmalloc(128) = 0x"); kprint_hex((uint32_t)(uintptr_t)b); kprint("\n");
+    kprint("  kmalloc(64)  = 0x"); kprint_hex((uint32_t)(uintptr_t)c); kprint("\n");
+    kprint("  kmalloc(256) = 0x"); kprint_hex((uint32_t)(uintptr_t)d); kprint("\n");
+
+    /* Write and read back to verify the memory is actually usable */
+    if (a) { ((uint8_t*)a)[0] = 0xAB; ((uint8_t*)a)[31] = 0xCD; }
+    if (b) { ((uint8_t*)b)[0] = 0x12; ((uint8_t*)b)[127] = 0x34; }
+
+    int ok = a && b && c && d
+          && ((uint8_t*)a)[0]   == 0xAB
+          && ((uint8_t*)a)[31]  == 0xCD
+          && ((uint8_t*)b)[0]   == 0x12
+          && ((uint8_t*)b)[127] == 0x34;
+
+    if (ok) {
+        vga_set_color(VGA_COLOR_LIGHT_GREEN);
+        kprint("  read-back OK\n");
+    } else {
+        vga_set_color(VGA_COLOR_LIGHT_RED);
+        kprint("  [FAIL] read-back mismatch!\n");
+    }
+
+    vga_set_color(VGA_COLOR_LIGHT_GREY);
+    kprint("heaptest: freeing (check coalesce)\n");
+    kfree(a); kfree(b); kfree(c); kfree(d);
+
+    vga_set_color(VGA_COLOR_LIGHT_GREEN);
+    kprint("  freed — run heapinfo to confirm coalesced\n");
+    vga_set_color(VGA_COLOR_LIGHT_GREY);
+}
+
 /* ---- command table ---- */
 
 const command_t commands[] = {
-    { "help",    "list available commands",               cmd_help    },
-    { "clear",   "clear the screen",                     cmd_clear   },
-    { "echo",    "print arguments to screen",             cmd_echo    },
-    { "meminfo", "show PMM memory statistics",            cmd_meminfo },
-    { "memtest", "alloc/free N frames (default 8)",       cmd_memtest },
-    { "hexdump", "dump memory: hexdump <addr> <len>",     cmd_hexdump },
-    { NULL, NULL, NULL }   /* sentinel */
+    { "help",     "list available commands",               cmd_help     },
+    { "clear",    "clear the screen",                      cmd_clear    },
+    { "echo",     "print arguments to screen",             cmd_echo     },
+    { "meminfo",  "show PMM memory statistics",            cmd_meminfo  },
+    { "memtest",  "alloc/free N frames (default 8)",       cmd_memtest  },
+    { "hexdump",  "dump memory: hexdump <addr> <len>",     cmd_hexdump  },
+    { "heapinfo", "show kmalloc heap statistics",          cmd_heapinfo },
+    { "heaptest", "alloc/free/read-back heap chunks",      cmd_heaptest },
+    { NULL, NULL, NULL }
 };

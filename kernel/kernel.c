@@ -3,10 +3,12 @@
 #include "idt.h"
 #include "pmm.h"
 #include "paging.h"
-#include "../shell/shell.h"
+#include "../mm/kmalloc.h"
 #include "../drivers/keyboard.h"
+#include "../shell/shell.h"
 
 #define MULTIBOOT2_MAGIC 0x36D76289
+#define HEAP_PAGES       16    /* 16 × 4KB = 64KB kernel heap */
 
 void kernel_main(uint32_t magic, uint32_t mboot_ptr) {
     vga_init();
@@ -36,6 +38,8 @@ void kernel_main(uint32_t magic, uint32_t mboot_ptr) {
     pmm_init(mboot_ptr);
     pmm_print_stats();
     paging_init();
+    kmalloc_init(HEAP_PAGES);
+    kmalloc_print_stats();
 
     shell_run();   /* never returns */
 }
