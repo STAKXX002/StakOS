@@ -9,7 +9,7 @@ ASFLAGS = -f elf32
 LDFLAGS = -ffreestanding -O2 -nostdlib -T linker.ld
 
 # Sources
-C_SRCS  = kernel/kernel.c kernel/gdt.c kernel/idt.c kernel/vga.c kernel/pmm.c kernel/paging.c drivers/keyboard.c
+C_SRCS  = kernel/kernel.c kernel/gdt.c kernel/idt.c kernel/vga.c kernel/pmm.c kernel/paging.c shell/shell.c shell/commands.c drivers/keyboard.c
 ASM_SRCS = boot/boot.asm boot/gdt_flush.asm boot/isr.asm
 
 # Objects
