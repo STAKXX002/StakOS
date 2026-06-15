@@ -16,7 +16,9 @@ static uint32_t   queue_size = 0;
 
 void scheduler_enqueue(process_t* proc) {
     if (!proc) return;
-    __asm__ volatile("cli");
+
+    uint32_t flags;
+    __asm__ volatile("pushf; pop %0; cli" : "=r"(flags));
 
     proc->state = PROCESS_READY;
     proc->next  = NULL;
@@ -29,7 +31,7 @@ void scheduler_enqueue(process_t* proc) {
     }
     queue_size++;
 
-    __asm__ volatile("sti");
+    __asm__ volatile("push %0; popf" : : "r"(flags));
 }
 
 void scheduler_dequeue(process_t* proc) {
