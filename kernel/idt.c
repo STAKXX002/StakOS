@@ -87,7 +87,8 @@ void isr_handler(registers_t* r) {
     kprint("ISR HIT: ");
     kprint_int(r->int_no);
     kprint("\n");
-    kpanic("EXCEPTION: ", exceptions[r->int_no]);
+    const char* exc_name = (r->int_no < 32) ? exceptions[r->int_no] : "Unknown";
+    kpanic("EXCEPTION: ", exc_name);
 }
 
 void irq_handler(registers_t* r) {
