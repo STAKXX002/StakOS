@@ -148,7 +148,7 @@ done:
     vga_set_color(VGA_COLOR_LIGHT_GREEN);
     kprint("  freed ");
     kprint_int((int32_t)n);
-    kprint(" frames — PMM recovered\n");
+    kprint(" frames - PMM recovered\n");
     vga_set_color(VGA_COLOR_LIGHT_GREY);
 }
 
@@ -283,7 +283,7 @@ void cmd_heaptest(int argc, char** argv) {
     kfree(a); kfree(b); kfree(c); kfree(d);
 
     vga_set_color(VGA_COLOR_LIGHT_GREEN);
-    kprint("  freed — run heapinfo to confirm coalesced\n");
+    kprint("  freed - run heapinfo to confirm coalesced\n");
     vga_set_color(VGA_COLOR_LIGHT_GREY);
 }
 
