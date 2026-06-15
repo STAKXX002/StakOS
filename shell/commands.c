@@ -91,6 +91,8 @@ void cmd_meminfo(int argc, char** argv) {
 
 /* ---- memtest ---- */
 
+#define MEMTEST_MAX_FRAMES 64
+
 /*
  * Allocates N frames, prints their physical addresses,
  * then frees them all and confirms the PMM count recovers.
@@ -100,14 +102,14 @@ void cmd_memtest(int argc, char** argv) {
     uint32_t n = 8;   /* default: test 8 frames */
     if (argc >= 2)
         n = sh_strtoul(argv[1], 10);
-    if (n == 0 || n > 64) {
+    if (n == 0 || n > MEMTEST_MAX_FRAMES) {
         vga_set_color(VGA_COLOR_LIGHT_RED);
         kprint("memtest: n must be 1-64\n");
         vga_set_color(VGA_COLOR_LIGHT_GREY);
         return;
     }
 
-    uint32_t frames[64];
+    uint32_t frames[MEMTEST_MAX_FRAMES];
 
     vga_set_color(VGA_COLOR_LIGHT_CYAN);
     kprint("memtest: allocating ");
