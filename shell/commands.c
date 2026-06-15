@@ -27,16 +27,30 @@ static uint32_t sh_strtoul(const char* s, int base) {
 /* ---- help ---- */
 
 void cmd_help(int argc, char** argv) {
-    (void)argc; (void)argv;
+    (void)argc;
+    (void)argv;
+
     vga_set_color(VGA_COLOR_LIGHT_CYAN);
     kprint("StakOS commands:\n");
-    vga_set_color(VGA_COLOR_LIGHT_GREY);
+
     for (int i = 0; commands[i].name != NULL; i++) {
-        kprint("  ");
         vga_set_color(VGA_COLOR_WHITE);
+        kprint("  ");
         kprint(commands[i].name);
+
+        /* find length manually */
+        int len = 0;
+        while (commands[i].name[len])
+            len++;
+
+        /* pad to 10 columns */
+        while (len < 10) {
+            kprint(" ");
+            len++;
+        }
+
         vga_set_color(VGA_COLOR_LIGHT_GREY);
-        kprint("\t- ");
+        kprint("- ");
         kprint(commands[i].help);
         kprint("\n");
     }
