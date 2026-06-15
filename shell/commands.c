@@ -162,6 +162,13 @@ void cmd_hexdump(int argc, char** argv) {
     uint32_t addr = sh_strtoul(argv[1], 16);
     uint32_t len  = sh_strtoul(argv[2], 10);
 
+    if (addr > 0x400000 || len > 0x400000 - addr) {
+        vga_set_color(VGA_COLOR_LIGHT_RED);
+        kprint("hexdump: address range outside mapped memory (0x0-0x400000)\n");
+        vga_set_color(VGA_COLOR_LIGHT_GREY);
+        return;
+    }
+
     if (len == 0 || len > 512) {
         vga_set_color(VGA_COLOR_LIGHT_RED);
         kprint("hexdump: len must be 1-512\n");
