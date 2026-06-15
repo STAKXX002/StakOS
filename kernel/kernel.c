@@ -3,6 +3,9 @@
 #include "idt.h"
 #include "pmm.h"
 #include "paging.h"
+#include "process.h"
+#include "scheduler.h"
+#include "pit.h"
 #include "../mm/kmalloc.h"
 #include "../drivers/keyboard.h"
 #include "../shell/shell.h"
@@ -41,5 +44,10 @@ void kernel_main(uint32_t magic, uint32_t mboot_ptr) {
     kmalloc_init(HEAP_PAGES);
     kmalloc_print_stats();
 
-    shell_run();   /* never returns */
+    /* Stage 6: process subsystem */
+    process_init();
+    scheduler_init();
+    pit_init(100);      /* 100 Hz = 10ms tick */
+
+    shell_run();        /* never returns */
 }

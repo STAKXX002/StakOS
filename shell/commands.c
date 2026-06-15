@@ -255,6 +255,51 @@ void cmd_heaptest(int argc, char** argv) {
     vga_set_color(VGA_COLOR_LIGHT_GREY);
 }
 
+/* ---- ps ---- */
+
+#include "../kernel/process.h"
+#include "../kernel/pit.h"
+
+void cmd_ps(int argc, char** argv) {
+    (void)argc; (void)argv;
+    process_list();
+}
+
+/* ---- sleep ---- */
+
+void cmd_sleep(int argc, char** argv) {
+    if (argc < 2) {
+        vga_set_color(VGA_COLOR_LIGHT_RED);
+        kprint("usage: sleep <ticks>\n");
+        vga_set_color(VGA_COLOR_LIGHT_GREY);
+        return;
+    }
+    uint32_t ticks = sh_strtoul(argv[1], 10);
+    uint32_t start = pit_ticks();
+    /* busy-wait for now — proper blocking comes with full scheduler integration */
+    while (pit_ticks() - start < ticks) {
+        __asm__ volatile("hlt");
+    }
+    vga_set_color(VGA_COLOR_LIGHT_GREEN);
+    kprint("slept ");
+    kprint_int((int32_t)ticks);
+    kprint(" ticks\n");
+    vga_set_color(VGA_COLOR_LIGHT_GREY);
+}
+
+/* ---- uptime ---- */
+
+void cmd_uptime(int argc, char** argv) {
+    (void)argc; (void)argv;
+    uint32_t ticks = pit_ticks();
+    uint32_t secs  = ticks / 100;   /* we run at 100 Hz */
+    kprint("uptime: ");
+    kprint_int((int32_t)secs);
+    kprint("s (");
+    kprint_int((int32_t)ticks);
+    kprint(" ticks at 100Hz)\n");
+}
+
 /* ---- command table ---- */
 
 const command_t commands[] = {
@@ -266,5 +311,8 @@ const command_t commands[] = {
     { "hexdump",  "dump memory: hexdump <addr> <len>",     cmd_hexdump  },
     { "heapinfo", "show kmalloc heap statistics",          cmd_heapinfo },
     { "heaptest", "alloc/free/read-back heap chunks",      cmd_heaptest },
-    { NULL, NULL, NULL }
+    { "ps",       "list processes",                        cmd_ps       },
+    { "sleep",    "sleep <ticks> (100 ticks = 1 second)",  cmd_sleep    },
+    { "uptime",   "show ticks and seconds since boot",     cmd_uptime   },
+    { NULL, NULL, NULL }   /* sentinel */
 };
