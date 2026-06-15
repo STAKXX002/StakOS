@@ -1,5 +1,6 @@
 #include "keyboard.h"
 #include "../kernel/vga.h"
+#include "../kernel/io.h"
 #include <stdint.h>
 
 #define KEYBOARD_DATA_PORT 0x60
@@ -41,11 +42,6 @@ static uint8_t kb_head = 0;  /* write position */
 static uint8_t kb_tail = 0;  /* read position  */
 static uint8_t shift   = 0;  /* shift state    */
 
-static inline uint8_t inb(uint16_t port) {
-    uint8_t ret;
-    __asm__ volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
-    return ret;
-}
 
 static void kb_buf_push(char c) {
     uint8_t next = (kb_head + 1) % KEYBOARD_BUF_SIZE;

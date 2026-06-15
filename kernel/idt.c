@@ -1,4 +1,5 @@
 #include "idt.h"
+#include "io.h"
 #include "vga.h"
 #include <stdint.h>
 
@@ -33,15 +34,6 @@ extern void irq15(void);
 #define PIC2_CMD  0xA0
 #define PIC2_DATA 0xA1
 
-static inline void outb(uint16_t port, uint8_t val) {
-    __asm__ volatile("outb %0, %1" : : "a"(val), "Nd"(port));
-}
-
-static inline uint8_t inb(uint16_t port) {
-    uint8_t ret;
-    __asm__ volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
-    return ret;
-}
 
 /* IRQ dispatch table - declared before irq_handler */
 typedef void (*irq_handler_t)(registers_t*);
