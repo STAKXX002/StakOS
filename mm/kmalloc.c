@@ -14,11 +14,13 @@
  * `next` links to the next block header in the arena (NULL = last block).
  */
 typedef struct block {
+    uint32_t     magic;
     uint32_t     size;
     uint32_t     free;
     struct block* next;
 } block_t;
 
+#define BLOCK_MAGIC 0xB10C0DE0
 #define BLOCK_HEADER_SIZE  sizeof(block_t)   /* 12 bytes */
 
 /*
@@ -62,9 +64,11 @@ void kmalloc_init(uint32_t pages) {
 
         /* Each frame becomes one big free block */
         block_t* blk = (block_t*)(uintptr_t)phys;
+        blk->magic = BLOCK_MAGIC;
         blk->size = PAGE_SIZE - BLOCK_HEADER_SIZE;
         blk->free = 1;
         blk->next = NULL;
+        
 
         if (!heap_start) heap_start = blk;
         if (prev)        prev->next  = blk;
@@ -87,6 +91,7 @@ static void split(block_t* blk, size_t size) {
 
     /* Carve out a new block in the remainder */
     block_t* new_blk = (block_t*)((uint8_t*)blk + BLOCK_HEADER_SIZE + size);
+    new_blk->magic = BLOCK_MAGIC;
     new_blk->size = blk->size - size - BLOCK_HEADER_SIZE;
     new_blk->free = 1;
     new_blk->next = blk->next;
@@ -143,12 +148,12 @@ void* kmalloc(size_t size) {
 
 void kfree(void* ptr) {
     if (!ptr) return;
-
-    /* Walk back to the block header */
     block_t* blk = (block_t*)((uint8_t*)ptr - BLOCK_HEADER_SIZE);
+    if (blk->magic != BLOCK_MAGIC || blk->free) {
+        kpanic("kfree: invalid pointer or double-free", "");
+        return;
+    }
     blk->free = 1;
-
-    /* Coalesce adjacent free blocks */
     coalesce();
 }
 
