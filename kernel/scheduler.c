@@ -16,9 +16,10 @@ static uint32_t   queue_size = 0;
 
 void scheduler_enqueue(process_t* proc) {
     if (!proc) return;
+    __asm__ volatile("cli");
+
     proc->state = PROCESS_READY;
     proc->next  = NULL;
-
     if (!queue_head) {
         queue_head = proc;
         queue_tail = proc;
@@ -27,14 +28,18 @@ void scheduler_enqueue(process_t* proc) {
         queue_tail       = proc;
     }
     queue_size++;
+
+    __asm__ volatile("sti");
 }
 
 void scheduler_dequeue(process_t* proc) {
     if (!proc || !queue_head) return;
 
+    uint32_t flags;
+    __asm__ volatile("pushf; pop %0; cli" : "=r"(flags));
+
     process_t* prev = NULL;
     process_t* cur  = queue_head;
-
     while (cur) {
         if (cur == proc) {
             if (prev)              prev->next  = cur->next;
@@ -42,11 +47,13 @@ void scheduler_dequeue(process_t* proc) {
             if (cur == queue_tail) queue_tail  = prev;
             cur->next = NULL;
             queue_size--;
-            return;
+            break;
         }
         prev = cur;
         cur  = cur->next;
     }
+
+    __asm__ volatile("push %0; popf" : : "r"(flags));
 }
 
 /* ---- scheduler_init ---- */
