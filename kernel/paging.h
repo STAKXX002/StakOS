@@ -34,6 +34,9 @@ typedef uint32_t page_table_t[PT_ENTRIES];
 /* A page directory: 1024 4-byte PDEs */
 typedef uint32_t page_dir_t[PD_ENTRIES];
 
+/* Physical address of the kernel page directory (set by paging_init). */
+extern uint32_t kernel_pd_phys;
+
 /*
  * Initialise paging:
  *   1. Allocate page directory from the PMM
