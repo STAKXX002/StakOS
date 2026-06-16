@@ -332,6 +332,33 @@ void cmd_uptime(int argc, char** argv) {
     kprint(" ticks at 100Hz)\n");
 }
 
+/* ---- vminfo ---- */
+
+#include "../kernel/paging.h"
+#include "../kernel/process.h"
+
+void cmd_vminfo(int argc, char** argv) {
+    (void)argc; (void)argv;
+
+    uint32_t live_cr3;
+    __asm__ volatile("mov %%cr3, %0" : "=r"(live_cr3));
+
+    vga_set_color(VGA_COLOR_LIGHT_CYAN);
+    kprint("Virtual memory info\n");
+    vga_set_color(VGA_COLOR_LIGHT_GREY);
+    kprint("  kernel_pd_phys : 0x"); kprint_hex(kernel_pd_phys); kprint("\n");
+    kprint("  live CR3       : 0x"); kprint_hex(live_cr3);        kprint("\n");
+
+    process_t* cur = process_current();
+    if (cur) {
+        kprint("  current proc   : ");
+        kprint(cur->name);
+        kprint("  cr3=0x");
+        kprint_hex(cur->cr3);
+        kprint(cur->cr3 == live_cr3 ? "  [matches]\n" : "  [MISMATCH!]\n");
+    }
+}
+
 /* ---- command table ---- */
 
 const command_t commands[] = {
@@ -346,5 +373,6 @@ const command_t commands[] = {
     { "ps",       "list processes",                        cmd_ps       },
     { "sleep",    "sleep <ticks> (100 ticks = 1 second)",  cmd_sleep    },
     { "uptime",   "show ticks and seconds since boot",     cmd_uptime   },
+    { "vminfo",   "show virtual memory info",              cmd_vminfo   },
     { NULL, NULL, NULL }   /* sentinel */
 };

@@ -24,5 +24,6 @@ void cmd_heaptest (int argc, char** argv);
 void cmd_ps       (int argc, char** argv);
 void cmd_sleep    (int argc, char** argv);
 void cmd_uptime   (int argc, char** argv);
+void vminfo       (int argc, char** argv);
 
 #endif
