@@ -8,12 +8,13 @@
 ;   offset 0  : pid          (uint32_t)
 ;   offset 4  : name[32]     (char[32])
 ;   offset 36 : state        (uint32_t enum)
-;   offset 40 : esp          (uint32_t)  ← the ONE field we save/restore
+;   offset 40 : esp          (uint32_t)  ← saved kernel stack pointer
+;   offset 44 : cr3          (uint32_t)  ← page directory physical address
 ;
 ; The trick: we don't save every register individually into the struct.
 ; Instead we PUSH them all onto the current stack, then save ESP.
 ; On restore we load the new ESP, then POP everything back.
-; This way the full context lives on each process's own kernel stack.
+; This way the full CPU context lives on each process's own kernel stack.
 ;
 ; Stack layout after our pushes (growing downward):
 ;   [esp]    eflags
@@ -49,15 +50,22 @@ context_switch:
     ; That's 8 pushes (32 bytes) + ret_eip (4 bytes) = 36 bytes above old*
     mov eax, [esp + 36]     ; eax = old (process_t*)
 
-    ; Save ESP into old->esp (offset 40 in the struct)
+    ; Save ESP into old->esp (offset 40)
     mov [eax + 40], esp
 
+    ; ---- SWITCH ADDRESS SPACE ----
+    ; Load new process's CR3 (offset 44) before touching new stack,
+    ; so any stack access after this point uses the new address space.
+    mov eax, [esp + 40]     ; eax = new (process_t*)
+    mov ecx, [eax + 44]     ; ecx = new->cr3
+    mov edx, cr3
+    cmp ecx, edx
+    je  .same_cr3           ; skip reload if same PD (e.g. two kernel threads)
+    mov cr3, ecx            ; loads new PD, flushes TLB
+.same_cr3:
+
     ; ---- RESTORE new process ----
-
-    ; Get `new` pointer
-    mov eax, [esp + 40]     ; eax = new (process_t*)  (one more slot now: old* itself)
-
-    ; Load new process's saved stack pointer
+    ; eax already = new proc pointer; reload esp from it
     mov esp, [eax + 40]
 
     ; Pop saved registers in reverse push order

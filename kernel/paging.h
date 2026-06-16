@@ -50,4 +50,19 @@ void paging_init(void);
 /* Map a single virtual page to a physical frame (supervisor, read/write). */
 void paging_map(uint32_t virt, uint32_t phys);
 
+/*
+ * Allocate a fresh page directory for a new process.
+ * Copies all kernel PD entries (the identity-mapped region) so the
+ * process can run kernel code, then zeros the user half.
+ * Returns the physical address of the new PD, or 0 on OOM.
+ */
+uint32_t paging_create_user_pd(void);
+
+/*
+ * Free a per-process page directory previously created by
+ * paging_create_user_pd(). Does NOT free any user-space page tables
+ * or frames — that's the job of the VM region tracker (stage 7c+).
+ */
+void paging_free_pd(uint32_t pd_phys);
+
 #endif

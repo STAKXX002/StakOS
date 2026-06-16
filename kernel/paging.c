@@ -76,3 +76,23 @@ void paging_map(uint32_t virt, uint32_t phys) {
     pt[pt_idx]   = (phys & ~0xFFF) | PTE_PRESENT | PTE_WRITABLE;
     tlb_flush(virt);
 }
+
+uint32_t paging_create_user_pd(void) {
+    uint32_t pd_phys = pmm_alloc_frame();
+    if (!pd_phys) return 0;
+
+    /* The new PD lives at pd_phys which is identity-mapped, so we can
+       write to it directly using its physical address as a pointer. */
+    uint32_t* pd = (uint32_t*)(uintptr_t)pd_phys;
+
+    /* Copy kernel mappings (identity-mapped region, entries 0..IDENTITY_PT_COUNT-1).
+       User entries (IDENTITY_PT_COUNT .. 1023) stay 0 — not present. */
+    for (uint32_t i = 0; i < PD_ENTRIES; i++)
+        pd[i] = (i < IDENTITY_PT_COUNT) ? kernel_pd[i] : 0;
+
+    return pd_phys;
+}
+
+void paging_free_pd(uint32_t pd_phys) {
+    if (pd_phys) pmm_free_frame(pd_phys);
+}

@@ -2,6 +2,7 @@
 #include "scheduler.h"
 #include "vga.h"
 #include "../mm/kmalloc.h"
+#include "paging.h"
 #include <stddef.h>
 
 /* Simple string copy — no libc */
@@ -59,6 +60,7 @@ void process_init(void) {
     idle_pcb.esp = 0;   /* set on first context switch away from idle */
 
     current_process = &idle_pcb;
+    idle_pcb.cr3 = kernel_pd_phys;   /* idle uses the original kernel address space */
 
     vga_set_color(VGA_COLOR_LIGHT_GREEN);
     kprint("[OK] Process subsystem initialized (idle PID=0)\n");
@@ -95,6 +97,13 @@ process_t* process_create(const char* name, void (*entry)(void), uint32_t priori
     /* Zero the PCB */
     uint8_t* p = (uint8_t*)proc;
     for (uint32_t i = 0; i < sizeof(process_t); i++) p[i] = 0;
+
+    /* Create this process's page directory */
+    proc->cr3 = paging_create_user_pd();
+    if (!proc->cr3) {
+        kfree(proc);
+        return NULL;
+    }
 
     proc->pid             = next_pid++;
     proc->state           = PROCESS_READY;

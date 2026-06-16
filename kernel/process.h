@@ -42,6 +42,7 @@ typedef struct process {
 
     /* CPU context — valid when process is not RUNNING */
     uint32_t         esp;           /* saved stack pointer                  */
+    uint32_t         cr3;           /* physical address of page dir     */
 
     /* Scheduling */
     uint32_t         priority;      /* 1 (low) – 10 (high); default 5      */
