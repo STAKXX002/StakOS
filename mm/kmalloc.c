@@ -57,13 +57,6 @@ void kmalloc_init(uint32_t pages) {
 
     for (uint32_t i = 0; i < pages; i++) {
         uint32_t phys = pmm_alloc_frame();
-
-        if (i == 0) {
-            vga_set_color(14);
-            kprint("[dbg] kmalloc first frame=0x"); kprint_hex(phys); kprint("\n");
-            vga_set_color(7);
-        }
-
         if (!phys) {
             /* Out of physical memory — stop here */
             break;
