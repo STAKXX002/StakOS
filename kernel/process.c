@@ -85,20 +85,7 @@ void process_init(void) {
  */
 process_t* process_create(const char* name, void (*entry)(void), uint32_t priority) {
     process_t* proc = (process_t*)kmalloc(sizeof(process_t));
-
-    vga_set_color(VGA_COLOR_YELLOW);
-    kprint("[dbg] process_create: kmalloc=0x");
-    kprint_hex((uint32_t)proc);
-    kprint("\n");
-    vga_set_color(VGA_COLOR_LIGHT_GREY);
-
-    if (!proc) {
-        vga_set_color(VGA_COLOR_LIGHT_RED);
-        kprint("[dbg] kmalloc returned NULL - heap full or uninitialised\n");
-        kmalloc_print_stats();
-        vga_set_color(VGA_COLOR_LIGHT_GREY);
-        return NULL;
-    }
+    if (!proc) return NULL;
 
     /* Zero the PCB */
     uint8_t* p = (uint8_t*)proc;
@@ -106,15 +93,7 @@ process_t* process_create(const char* name, void (*entry)(void), uint32_t priori
 
     /* Create this process's page directory */
     proc->cr3 = paging_create_user_pd();
-
-    vga_set_color(VGA_COLOR_YELLOW);
-    kprint("[dbg] process_create: cr3=0x");
-    kprint_hex(proc->cr3);
-    kprint("\n");
-    vga_set_color(VGA_COLOR_LIGHT_GREY);
-
     if (!proc->cr3) {
-        kprint("[dbg] paging_create_user_pd returned 0 - OOM\n");
         kfree(proc);
         return NULL;
     }
@@ -172,12 +151,6 @@ process_t* process_create(const char* name, void (*entry)(void), uint32_t priori
     /* esp points to the edi slot — exactly where context_switch expects it */
     proc->esp = (uint32_t)stack;
 
-    /* Add to scheduler queue */
-    vga_set_color(VGA_COLOR_YELLOW);
-    kprint("[dbg] process_create: enqueueing pid=");
-    kprint_int((int32_t)proc->pid);
-    kprint(" name="); kprint(proc->name); kprint("\n");
-    vga_set_color(VGA_COLOR_LIGHT_GREY);
     scheduler_enqueue(proc);
 
     return proc;
@@ -240,32 +213,9 @@ void process_list(void) {
 
     process_t* cur = process_current();
 
-    /* DEBUG: show raw queue state */
-    vga_set_color(VGA_COLOR_YELLOW);
-    kprint("[dbg] cur=0x"); kprint_hex((uint32_t)cur);
-    kprint(" qhead=0x"); kprint_hex((uint32_t)scheduler_queue_head());
-    kprint("\n");
-    vga_set_color(VGA_COLOR_LIGHT_GREY);
-
-    /* Walk entire queue raw, ignoring cur check */
-    process_t* q = scheduler_queue_head();
-    while (q) {
-        vga_set_color(VGA_COLOR_YELLOW);
-        kprint("[dbg] q=0x"); kprint_hex((uint32_t)q);
-        kprint(" pid="); kprint_int(q->pid);
-        kprint(" name="); kprint(q->name);
-        kprint(" next=0x"); kprint_hex((uint32_t)q->next);
-        kprint("\n");
-        q = q->next;
-    }
-    vga_set_color(VGA_COLOR_LIGHT_GREY);
-
-    /* current_process is RUNNING and never in the queue — print it first */
     if (cur)
         print_proc_row(cur, 1);
 
-    /* everything else is in the scheduler queue (READY / BLOCKED).
-       Skip current_process — it's already in the queue but printed above. */
     process_t* p = scheduler_queue_head();
     while (p) {
         if (p != cur)
