@@ -65,9 +65,27 @@ void scheduler_init(void) {
     queue_tail = NULL;
     queue_size = 0;
 
+    /*
+     * process_init() (run just before this) sets current_process to the
+     * idle PCB directly, bypassing the queue entirely. If we don't enqueue
+     * it here, idle sits outside the round-robin set: the instant anything
+     * else is created and idle's first (1-tick) quantum expires, idle is
+     * marked READY but can never be picked again — the system gets stuck
+     * running whatever just preempted it, forever.
+     */
+    process_t* idle = process_current();
+    if (idle) {
+        scheduler_enqueue(idle);
+        idle->state = PROCESS_RUNNING;   /* it really is running right now */
+    }
+
     vga_set_color(VGA_COLOR_LIGHT_GREEN);
     kprint("[OK] Scheduler initialized (round-robin + priority)\n");
     vga_set_color(VGA_COLOR_LIGHT_GREY);
+}
+
+process_t* scheduler_queue_head(void) {
+    return queue_head;
 }
 
 /* ---- pick next ---- */

@@ -42,4 +42,11 @@ void scheduler_yield(void);
  */
 void context_switch(process_t* old, process_t* new);
 
+/*
+ * Returns the head of the round-robin ready queue (NULL if empty).
+ * Exposed read-only so other subsystems (e.g. 'ps') can enumerate every
+ * known process instead of only whichever one is currently running.
+ */
+process_t* scheduler_queue_head(void);
+
 #endif
