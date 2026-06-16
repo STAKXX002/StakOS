@@ -1,6 +1,9 @@
 #include "commands.h"
 #include "../kernel/vga.h"
 #include "../kernel/pmm.h"
+#include "../kernel/paging.h"
+#include "../kernel/process.h"
+#include "../kernel/scheduler.h"
 #include <stdint.h>
 
 /* ---- string helpers ---- */
@@ -337,6 +340,26 @@ void cmd_uptime(int argc, char** argv) {
 #include "../kernel/paging.h"
 #include "../kernel/process.h"
 
+static void vminfo_print_proc(process_t* p, uint32_t live_cr3) {
+    kprint_int((int32_t)p->pid);
+    kprint("  ");
+    /* pad name to 16 chars */
+    const char* n = p->name;
+    uint32_t    len = 0;
+    while (n[len]) len++;
+    kprint(n);
+    for (uint32_t i = len; i < 16; i++) kprint(" ");
+    kprint("0x"); kprint_hex(p->cr3);
+    kprint("  ");
+    if (p->cr3 == live_cr3)
+        kprint("<-- live");
+    else if (p->cr3 == kernel_pd_phys)
+        kprint("(kernel PD)");
+    else
+        kprint("(own PD)");
+    kprint("\n");
+}
+
 void cmd_vminfo(int argc, char** argv) {
     (void)argc; (void)argv;
 
@@ -344,18 +367,26 @@ void cmd_vminfo(int argc, char** argv) {
     __asm__ volatile("mov %%cr3, %0" : "=r"(live_cr3));
 
     vga_set_color(VGA_COLOR_LIGHT_CYAN);
-    kprint("Virtual memory info\n");
+    kprint("Virtual memory\n");
     vga_set_color(VGA_COLOR_LIGHT_GREY);
     kprint("  kernel_pd_phys : 0x"); kprint_hex(kernel_pd_phys); kprint("\n");
-    kprint("  live CR3       : 0x"); kprint_hex(live_cr3);        kprint("\n");
+    kprint("  live CR3       : 0x"); kprint_hex(live_cr3);        kprint("\n\n");
 
+    vga_set_color(VGA_COLOR_LIGHT_CYAN);
+    kprint("PID  NAME              CR3         NOTE\n");
+    kprint("---  ----------------  ----------  -----------\n");
+    vga_set_color(VGA_COLOR_WHITE);
+
+    /* current process (RUNNING, not in queue) */
     process_t* cur = process_current();
-    if (cur) {
-        kprint("  current proc   : ");
-        kprint(cur->name);
-        kprint("  cr3=0x");
-        kprint_hex(cur->cr3);
-        kprint(cur->cr3 == live_cr3 ? "  [matches]\n" : "  [MISMATCH!]\n");
+    if (cur) vminfo_print_proc(cur, live_cr3);
+
+    /* all queued processes — skip current, already printed above */
+    vga_set_color(VGA_COLOR_LIGHT_GREY);
+    process_t* p = scheduler_queue_head();
+    while (p) {
+        if (p != cur) vminfo_print_proc(p, live_cr3);
+        p = p->next;
     }
 }
 

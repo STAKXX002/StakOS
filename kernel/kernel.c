@@ -13,6 +13,13 @@
 #define MULTIBOOT2_MAGIC 0x36D76289
 #define HEAP_PAGES       16    /* 16 × 4KB = 64KB kernel heap */
 
+static void test_task(void) {
+    while (1) {
+        // just spin, scheduler will preempt it
+        __asm__ volatile("hlt");
+    }
+}
+
 void kernel_main(uint32_t magic, uint32_t mboot_ptr) {
     vga_init();
     gdt_init();
@@ -47,6 +54,7 @@ void kernel_main(uint32_t magic, uint32_t mboot_ptr) {
     /* Stage 6: process subsystem */
     process_init();
     scheduler_init();
+    process_create("test", test_task, 5);
     pit_init(100);      /* 100 Hz = 10ms tick */
 
     shell_run();        /* never returns */

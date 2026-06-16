@@ -54,9 +54,8 @@ typedef struct process {
     /* Exit */
     int32_t          exit_code;     /* set by process_exit()                */
 
-    /* Per-process kernel stack (8 KB) */
-    uint8_t          kernel_stack[STACK_SIZE];
-    uint32_t         kernel_stack_top; /* = (uint32_t)&kernel_stack[STACK_SIZE] */
+    /* Per-process kernel stack — 2 PMM frames (8 KB), allocated in process_create */
+    uint32_t         kernel_stack_top; /* virtual address of top of stack    */
 
     /* Intrusive linked list — scheduler queue */
     struct process*  next;
