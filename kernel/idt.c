@@ -83,6 +83,30 @@ static const char* exceptions[] = {
 };
 
 void isr_handler(registers_t* r) {
+
+    if (r->int_no == 14) {
+        /* Page fault: CR2 holds the faulting virtual address */
+        uint32_t fault_addr;
+        __asm__ volatile("mov %%cr2, %0" : "=r"(fault_addr));
+
+        vga_set_color(VGA_COLOR_LIGHT_RED);
+        kprint("\n[PAGE FAULT] addr=0x");
+        kprint_hex(fault_addr);
+        kprint("  err=");
+        kprint_hex(r->err_code);
+        kprint("  eip=0x");
+        kprint_hex(r->eip);
+
+        /* Decode error code bits */
+        kprint("\n  ");
+        kprint(r->err_code & 1 ? "protection " : "not-present ");
+        kprint(r->err_code & 2 ? "write "      : "read ");
+        kprint(r->err_code & 4 ? "user"         : "kernel");
+        kprint("\n");
+
+        kpanic("Page fault", "");
+    }
+
     vga_set_color(VGA_COLOR_YELLOW);
     kprint("ISR HIT: ");
     kprint_int(r->int_no);
