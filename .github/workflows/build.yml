@@ -13,19 +13,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # 1. Install nasm and the ISO generation tools your Makefile expects
     - name: Install build tools
       run: |
         sudo apt-get update
         sudo apt-get install -y nasm genisoimage grub-pc-bin mtools xorriso
 
-    # 2. Get the special i686-elf-gcc compiler
-    - name: Set up i686-elf toolchain
-      uses: lowenware/setup-i686-elf-gcc@v1
-      with:
-        version: '13.2.0'
+    - name: Install i686-elf toolchain via Homebrew
+      run: |
+        brew install i686-elf-gcc
+        echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
 
-    # 3. Run your specific compilation commands
     - name: Compile kernel
       run: make
 
