@@ -188,18 +188,20 @@ void process_list(void) {
     kprint("---  -------  ---  ----------------\n");
     vga_set_color(VGA_COLOR_LIGHT_GREY);
 
-    /* Show current process */
     process_t* cur = process_current();
-    if (cur) {
-        vga_set_color(VGA_COLOR_WHITE);
-        kprint_int((int32_t)cur->pid);
+    process_t* p   = scheduler_queue_head();
+
+    while (p) {
+        vga_set_color(p == cur ? VGA_COLOR_WHITE : VGA_COLOR_LIGHT_GREY);
+        kprint_int((int32_t)p->pid);
         kprint("    ");
-        kprint(state_name(cur->state));
+        kprint(state_name(p->state));
         kprint("  ");
-        kprint_int((int32_t)cur->priority);
+        kprint_int((int32_t)p->priority);
         kprint("    ");
-        kprint(cur->name);
+        kprint(p->name);
         kprint("\n");
-        vga_set_color(VGA_COLOR_LIGHT_GREY);
+        p = p->next;
     }
+    vga_set_color(VGA_COLOR_LIGHT_GREY);
 }
