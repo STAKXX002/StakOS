@@ -20,6 +20,7 @@ jobs:
 
     - name: Install i686-elf toolchain via Homebrew
       run: |
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
         brew install i686-elf-gcc
         echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
 
