@@ -110,11 +110,10 @@ static void split(block_t* blk, size_t size) {
 static void coalesce(void) {
     block_t* cur = heap_start;
     while (cur && cur->next) {
-        if (cur->free && cur->next->free) {
-            /* Merge cur and cur->next */
+        uint8_t* end_of_cur = (uint8_t*)cur + BLOCK_HEADER_SIZE + cur->size;
+        if (cur->free && cur->next->free && (uint8_t*)cur->next == end_of_cur) {
             cur->size += BLOCK_HEADER_SIZE + cur->next->size;
             cur->next  = cur->next->next;
-            /* Don't advance — try merging again from same position */
         } else {
             cur = cur->next;
         }
