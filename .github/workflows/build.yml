@@ -44,8 +44,10 @@ jobs:
           -display none \
           -debugcon file:debug.log \
           -no-reboot \
+          -boot d \
           -cdrom build/stakos.iso || true
         echo "----- QEMU debug console output -----"
+        ls -la debug.log
         cat debug.log
         grep -q "STAKOS_BOOT_OK" debug.log
 
