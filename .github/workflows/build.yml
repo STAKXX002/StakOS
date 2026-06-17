@@ -16,16 +16,41 @@ jobs:
     - name: Install build tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y nasm genisoimage grub-pc-bin mtools xorriso
+        sudo apt-get install -y nasm genisoimage grub-pc-bin mtools xorriso qemu-system-x86
+
+    - name: Cache i686-elf-gcc toolchain
+      id: toolchain-cache
+      uses: actions/cache@v4
+      with:
+        path: /home/linuxbrew/.linuxbrew
+        key: ${{ runner.os }}-linuxbrew-i686-elf-gcc-v1
 
     - name: Install i686-elf toolchain via Homebrew
+      if: steps.toolchain-cache.outputs.cache-hit != 'true'
       run: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
         brew install i686-elf-gcc
-        echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
 
-    - name: Compile kernel
-      run: make
+    - name: Add Homebrew to PATH
+      run: echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
 
     - name: Build bootable ISO
       run: make iso
+
+    - name: Boot smoke test in QEMU
+      run: |
+        timeout --signal=KILL 30 qemu-system-i386 \
+          -m 32M \
+          -display none \
+          -debugcon file:debug.log \
+          -no-reboot \
+          -cdrom build/stakos.iso || true
+        echo "----- QEMU debug console output -----"
+        cat debug.log
+        grep -q "STAKOS_BOOT_OK" debug.log
+
+    - name: Upload ISO artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: stakos-iso
+        path: build/stakos.iso
