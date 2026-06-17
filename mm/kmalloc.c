@@ -192,4 +192,7 @@ void kmalloc_print_stats(void) {
     kprint(" bytes in ");
     kprint_int((int32_t)used_blocks);
     kprint(" block(s)\n");
+    kprint("     Total       : ");
+    kprint_int((int32_t)total_blocks);
+    kprint(" block(s)\n");
 }
