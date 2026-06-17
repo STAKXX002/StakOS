@@ -6,13 +6,23 @@
 #include "process.h"
 #include "scheduler.h"
 #include "pit.h"
+#include "io.h"
 #include "../mm/kmalloc.h"
 #include "../drivers/keyboard.h"
 #include "../shell/shell.h"
 
 #define MULTIBOOT2_MAGIC 0x36D76289
 #define HEAP_PAGES       16    /* 16 × 4KB = 64KB kernel heap */
+#define MULTIBOOT2_MAGIC 0x36D76289
+#define HEAP_PAGES       16    /* 16 × 4KB = 64KB kernel heap */
 
+/* Write a string to the QEMU/Bochs debug console (I/O port 0xE9).
+   Used by CI to confirm the kernel finished booting. */
+static void debug_print(const char* s) {
+    while (*s) {
+        outb(0xE9, (uint8_t)*s++);
+    }
+}
 
 void kernel_main(uint32_t magic, uint32_t mboot_ptr) {
     vga_init();
@@ -50,5 +60,6 @@ void kernel_main(uint32_t magic, uint32_t mboot_ptr) {
     scheduler_init();
     pit_init(100);      /* 100 Hz = 10ms tick */
 
+    debug_print("STAKOS_BOOT_OK\n");
     shell_run();        /* never returns */
 }
