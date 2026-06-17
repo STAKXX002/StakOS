@@ -258,10 +258,10 @@ void cmd_heaptest(int argc, char** argv) {
     void* c = kmalloc(64);
     void* d = kmalloc(256);
 
-    kprint("  kmalloc(32)  = 0x"); kprint_hex((uint32_t)(uintptr_t)a); kprint("\n");
-    kprint("  kmalloc(128) = 0x"); kprint_hex((uint32_t)(uintptr_t)b); kprint("\n");
-    kprint("  kmalloc(64)  = 0x"); kprint_hex((uint32_t)(uintptr_t)c); kprint("\n");
-    kprint("  kmalloc(256) = 0x"); kprint_hex((uint32_t)(uintptr_t)d); kprint("\n");
+    kprint("  kmalloc(32)  = "); kprint_hex((uint32_t)(uintptr_t)a); kprint("\n");
+    kprint("  kmalloc(128) = "); kprint_hex((uint32_t)(uintptr_t)b); kprint("\n");
+    kprint("  kmalloc(64)  = "); kprint_hex((uint32_t)(uintptr_t)c); kprint("\n");
+    kprint("  kmalloc(256) = "); kprint_hex((uint32_t)(uintptr_t)d); kprint("\n");
 
     /* Write and read back to verify the memory is actually usable */
     if (a) { ((uint8_t*)a)[0] = 0xAB; ((uint8_t*)a)[31] = 0xCD; }
