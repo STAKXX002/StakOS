@@ -56,12 +56,24 @@ An interactive command-line shell with a readline loop, argv-style parsing, and 
 - GRUB (`grub-mkrescue`) for building the bootable ISO
 - QEMU (`qemu-system-i386`) for running it
 
-### Commands
+### Building
 
-```bash
-make iso     # build the bootable ISO
-make run     # build (if needed) and boot it in QEMU
-make clean   # remove build artifacts
+Build the bootable ISO:
+
+```bash id="1qf2zx"
+make iso
+```
+
+Run StakOS in QEMU:
+
+```bash id="8jg4lw"
+make run
+```
+
+Remove build artifacts:
+
+```bash id="3c9mvn"
+make clean
 ```
 
 ## Roadmap
