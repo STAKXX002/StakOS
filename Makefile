@@ -10,19 +10,20 @@ LDFLAGS = -ffreestanding -O2 -nostdlib -T linker.ld
 
 # Sources
 C_SRCS = \
-	kernel/kernel.c \
-	kernel/gdt.c \
-	kernel/idt.c \
-	kernel/vga.c \
-	kernel/pmm.c \
-	kernel/paging.c \
-	kernel/process.c \
-	kernel/scheduler.c \
-	kernel/pit.c \
-	shell/shell.c \
-	shell/commands.c \
-	mm/kmalloc.c \
-	drivers/keyboard.c
+    kernel/kernel.c \
+    kernel/gdt.c \
+    kernel/idt.c \
+    kernel/vga.c \
+    kernel/pmm.c \
+    kernel/paging.c \
+    kernel/process.c \
+    kernel/scheduler.c \
+    kernel/pit.c \
+    kernel/syscall.c \
+    shell/shell.c \
+    shell/commands.c \
+    mm/kmalloc.c \
+    drivers/keyboard.c
 
 ASM_SRCS = \
 	boot/boot.asm \

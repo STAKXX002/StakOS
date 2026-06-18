@@ -29,6 +29,8 @@ extern void irq9(void);  extern void irq10(void); extern void irq11(void);
 extern void irq12(void); extern void irq13(void); extern void irq14(void);
 extern void irq15(void);
 
+extern void isr128(void);
+
 #define PIC1_CMD  0x20
 #define PIC1_DATA 0x21
 #define PIC2_CMD  0xA0
@@ -183,6 +185,10 @@ void idt_init(void) {
     idt_set_gate(45, (uint32_t)irq13, 0x08, 0x8E);
     idt_set_gate(46, (uint32_t)irq14, 0x08, 0x8E);
     idt_set_gate(47, (uint32_t)irq15, 0x08, 0x8E);
+
+    /* Syscall gate. DPL=3 so ring-3 code can trigger it once stage 9
+   adds user mode — harmless for now since nothing runs at CPL=3 yet. */
+    idt_set_gate(128, (uint32_t)isr128, 0x08, 0xEE);
 
     idt_flush((uint32_t)&idt_ptr);
     __asm__ volatile("sti");

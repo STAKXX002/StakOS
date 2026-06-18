@@ -1,5 +1,6 @@
 extern isr_handler
 extern irq_handler
+extern syscall_handler
 
 %macro ISR_NOERRCODE 1
 global isr%1
@@ -74,6 +75,13 @@ IRQ 13, 45
 IRQ 14, 46
 IRQ 15, 47
 
+; ---- Syscall gate (int 0x80) ----
+global isr128
+isr128:
+    push dword 0          ; dummy err_code, keeps registers_t layout uniform
+    push dword 128         ; int_no
+    jmp syscall_common_stub
+
 isr_common_stub:
     pusha
     mov ax, ds
@@ -119,6 +127,31 @@ irq_common_stub:
     mov es, ax
     mov fs, ax
     mov gs, ax
+
+    popa
+    add esp, 8
+    iret
+
+syscall_common_stub:
+    pusha
+    mov ax, ds
+    push eax
+
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    push esp
+    call syscall_handler
+    add esp, 4
+
+    pop ebx
+    mov ds, bx
+    mov es, bx
+    mov fs, bx
+    mov gs, bx
 
     popa
     add esp, 8
