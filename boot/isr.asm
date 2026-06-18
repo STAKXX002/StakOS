@@ -146,12 +146,17 @@ syscall_common_stub:
     push esp
     call syscall_handler
     add esp, 4
+    ; eax now holds the syscall's return value — must survive until popa
 
-    pop ebx
+    pop ebx               ; restore saved ds into ebx, NOT eax (eax holds retval)
     mov ds, bx
     mov es, bx
     mov fs, bx
     mov gs, bx
+
+    ; Overwrite the pusha'd eax slot on the stack with the return value,
+    ; so popa loads it into eax for the calling process to see after iret.
+    mov [esp + 28], eax
 
     popa
     add esp, 8
