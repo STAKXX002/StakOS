@@ -1,12 +1,13 @@
 #include "gdt.h"
 
-#define GDT_ENTRIES 3
+#define GDT_ENTRIES 6
 
-static gdt_entry_t gdt[GDT_ENTRIES];
-static gdt_ptr_t   gdt_ptr;
+static gdt_entry_t  gdt[GDT_ENTRIES];
+static gdt_ptr_t    gdt_ptr;
+static tss_entry_t  tss __attribute__((aligned(4)));
 
-/* Declared in gdt_flush.asm */
 extern void gdt_flush(uint32_t);
+extern void tss_flush(void);
 
 static void gdt_set_entry(int i, uint32_t base, uint32_t limit,
                            uint8_t access, uint8_t gran) {
@@ -20,13 +21,35 @@ static void gdt_set_entry(int i, uint32_t base, uint32_t limit,
     gdt[i].access      = access;
 }
 
+static void write_tss(int i, uint16_t ss0) {
+    uint32_t base  = (uint32_t)&tss;
+    uint32_t limit = base + sizeof(tss_entry_t);
+
+    /* TSS descriptor access byte 0x89: present, DPL=0, type=32-bit TSS */
+    gdt_set_entry(i, base, limit, 0x89, 0x00);
+
+    for (uint32_t j = 0; j < sizeof(tss_entry_t); j++)
+        ((uint8_t*)&tss)[j] = 0;
+
+    tss.ss0        = ss0;
+    tss.iomap_base = sizeof(tss_entry_t);
+}
+
 void gdt_init(void) {
     gdt_ptr.limit = (sizeof(gdt_entry_t) * GDT_ENTRIES) - 1;
     gdt_ptr.base  = (uint32_t)&gdt;
 
-    gdt_set_entry(0, 0, 0,          0x00, 0x00); /* Null descriptor      */
-    gdt_set_entry(1, 0, 0xFFFFFFFF, 0x9A, 0xCF); /* Kernel code segment  */
-    gdt_set_entry(2, 0, 0xFFFFFFFF, 0x92, 0xCF); /* Kernel data segment  */
+    gdt_set_entry(0, 0, 0,          0x00, 0x00); /* Null                */
+    gdt_set_entry(1, 0, 0xFFFFFFFF, 0x9A, 0xCF); /* Kernel code (ring0)  */
+    gdt_set_entry(2, 0, 0xFFFFFFFF, 0x92, 0xCF); /* Kernel data (ring0)  */
+    gdt_set_entry(3, 0, 0xFFFFFFFF, 0xFA, 0xCF); /* User code   (ring3)  */
+    gdt_set_entry(4, 0, 0xFFFFFFFF, 0xF2, 0xCF); /* User data   (ring3)  */
+    write_tss(5, 0x10);                          /* TSS — ss0 = kernel data selector */
 
     gdt_flush((uint32_t)&gdt_ptr);
+    tss_flush();
+}
+
+void tss_set_kernel_stack(uint32_t esp0) {
+    tss.esp0 = esp0;
 }

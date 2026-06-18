@@ -24,3 +24,11 @@ idt_flush:
     mov eax, [esp+4]
     lidt [eax]
     ret
+
+global tss_flush
+tss_flush:
+    ; TSS is GDT entry 5 → selector = 5*8 = 0x28
+    ; Bit 2 set would mean LDT, not relevant here (we use 0x00 in access)
+    mov ax, 0x28
+    ltr ax
+    ret
