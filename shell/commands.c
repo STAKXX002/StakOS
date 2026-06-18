@@ -390,6 +390,38 @@ void cmd_vminfo(int argc, char** argv) {
     }
 }
 
+/* ---- synctest ---- */
+
+#include "../kernel/syscall_wrapper.h"
+
+/*
+ * cmd_synctest — exercises the int 0x80 syscall gate end to end.
+ * Proves: the IDT gate reaches syscall_handler, arguments survive
+ * the ebx/ecx/edx convention, and the dispatcher's return value
+ * comes back through iret into eax.
+ */
+void cmd_synctest(int argc, char** argv) {
+    (void)argc; (void)argv;
+
+    vga_set_color(VGA_COLOR_LIGHT_CYAN);
+    kprint("Syscall gate test\n");
+    vga_set_color(VGA_COLOR_LIGHT_GREY);
+
+    const char* msg = "  hello from sys_write via int 0x80\n";
+    uint32_t len = 0;
+    while (msg[len]) len++;
+
+    uint32_t written = do_sys_write(1, msg, len);
+
+    kprint("  sys_write returned: ");
+    kprint_int((int32_t)written);
+    kprint(written == len ? "  [OK]\n" : "  [MISMATCH]\n");
+
+    kprint("  calling sys_yield()...\n");
+    do_sys_yield();
+    kprint("  back from sys_yield  [OK]\n");
+}
+
 /* ---- command table ---- */
 
 const command_t commands[] = {
@@ -405,5 +437,6 @@ const command_t commands[] = {
     { "sleep",    "sleep <ticks> (100 ticks = 1 second)",  cmd_sleep    },
     { "uptime",   "show ticks and seconds since boot",     cmd_uptime   },
     { "vminfo",   "show virtual memory info",              cmd_vminfo   },
+    { "synctest", "exercise int 0x80 syscall gate",        cmd_synctest },
     { NULL, NULL, NULL }   /* sentinel */
 };
