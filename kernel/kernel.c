@@ -7,6 +7,7 @@
 #include "scheduler.h"
 #include "pit.h"
 #include "io.h"
+#include "syscall_wrapper.h"
 #include "../mm/kmalloc.h"
 #include "../drivers/keyboard.h"
 #include "../shell/shell.h"
