@@ -113,14 +113,35 @@ void paging_mark_user(uint32_t virt) {
     uint32_t pd_idx = virt >> 22;
     uint32_t pt_idx = (virt >> 12) & 0x3FF;
 
-    if (!(kernel_pd[pd_idx] & PDE_PRESENT)) {
+    /*
+     * IMPORTANT: modify the *currently active* page directory (via
+     * live CR3), not the static kernel_pd template.
+     *
+     * Each process gets its own PD, cloned from kernel_pd at
+     * process_create() time (see paging_create_user_pd). That clone
+     * copies PDE *values* — if we later OR a bit into kernel_pd here,
+     * any process whose PD was cloned before this call still has the
+     * old PDE value and never sees the change. Since this function is
+     * always called from the process that's about to use the mapping
+     * (right before its own enter_usermode), reading CR3 here always
+     * gives the right page directory to patch.
+     */
+    uint32_t cr3;
+    __asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
+    uint32_t* pd = (uint32_t*)(uintptr_t)cr3;
+
+    if (!(pd[pd_idx] & PDE_PRESENT)) {
         kpanic("paging_mark_user: page not mapped", "");
         return;
     }
 
-    kernel_pd[pd_idx] |= PDE_USER;
+    pd[pd_idx] |= PDE_USER;
 
-    uint32_t* pt = (uint32_t*)(uintptr_t)(kernel_pd[pd_idx] & ~0xFFF);
+    /* The page table itself IS shared across all per-process PD clones
+       (the PDE copy points at the same physical table), so this PTE
+       write is visible everywhere regardless of which PD we patched
+       above — but we patch via `pd` for consistency and clarity. */
+    uint32_t* pt = (uint32_t*)(uintptr_t)(pd[pd_idx] & ~0xFFF);
     if (!(pt[pt_idx] & PTE_PRESENT)) {
         kpanic("paging_mark_user: page not mapped", "");
         return;
