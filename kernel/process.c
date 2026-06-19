@@ -6,6 +6,11 @@
 #include "paging.h"
 #include <stddef.h>
 
+/* Defined in boot/boot.asm — top of the 16KB boot-time kernel stack.
+   Used as idle's kernel_stack_top so the TSS esp0 is always valid,
+   even before idle has ever been switched away from. */
+extern uint8_t stack_top;
+
 /* Simple string copy — no libc */
 static void kstrncpy(char* dst, const char* src, uint32_t n) {
     uint32_t i = 0;
@@ -50,7 +55,7 @@ void process_init(void) {
     kstrncpy(idle_pcb.name, "idle", 32);
 
     idle_pcb.esp = 0;   /* set on first context switch away from idle */
-    idle_pcb.kernel_stack_top = 0;  /* idle runs on the live kernel stack */
+    idle_pcb.kernel_stack_top = (uint32_t)&stack_top;  /* the real boot-time stack */
 
     current_process = &idle_pcb;
     idle_pcb.cr3 = kernel_pd_phys;   /* idle uses the original kernel address space */

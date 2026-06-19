@@ -1,6 +1,7 @@
 #include "scheduler.h"
 #include "process.h"
 #include "vga.h"
+#include "gdt.h"
 
 
 /*
@@ -129,6 +130,16 @@ static void do_switch(process_t* next) {
 
     next->state           = PROCESS_RUNNING;
     next->ticks_remaining = next->priority;   /* reset quantum */
+
+    /*
+     * Point the TSS at next's kernel stack top. The CPU reads this
+     * (esp0/ss0) automatically on any ring 3 -> ring 0 transition
+     * (interrupt, exception, or int 0x80) — it has nothing to do with
+     * our own software context_switch below, but it MUST be correct
+     * before any process runs at CPL=3, or the first interrupt while
+     * that process is running will load a stale or zero stack pointer.
+     */
+    tss_set_kernel_stack(next->kernel_stack_top);
 
     process_set_current(next);
     context_switch(old, next);
