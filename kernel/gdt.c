@@ -23,7 +23,7 @@ static void gdt_set_entry(int i, uint32_t base, uint32_t limit,
 
 static void write_tss(int i, uint16_t ss0) {
     uint32_t base  = (uint32_t)&tss;
-    uint32_t limit = base + sizeof(tss_entry_t);
+    uint32_t limit = sizeof(tss_entry_t) - 1;   /* size, not an address */
 
     /* TSS descriptor access byte 0x89: present, DPL=0, type=32-bit TSS */
     gdt_set_entry(i, base, limit, 0x89, 0x00);

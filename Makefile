@@ -29,7 +29,8 @@ ASM_SRCS = \
 	boot/boot.asm \
 	boot/gdt_flush.asm \
 	boot/isr.asm \
-	boot/context_switch.asm
+	boot/context_switch.asm \
+	boot/usermode.asm
 
 # Object files inside build/
 C_OBJS   = $(patsubst %.c,build/%.o,$(C_SRCS))

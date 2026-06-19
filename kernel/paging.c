@@ -96,3 +96,36 @@ uint32_t paging_create_user_pd(void) {
 void paging_free_pd(uint32_t pd_phys) {
     if (pd_phys) pmm_free_frame(pd_phys);
 }
+
+/*
+ * Mark an already-mapped page as user-accessible (sets the U/S bit on
+ * both the PDE and PTE). Used for stage 9 test code that lives inside
+ * the kernel's identity-mapped region but needs to run at CPL=3 —
+ * without this, every identity-mapped page is supervisor-only and any
+ * ring-3 instruction fetch there takes a protection-violation page
+ * fault (err_code bit 2 = user, bit 0 = protection, not not-present).
+ *
+ * This only touches kernel_pd, the address space active right now.
+ * Real user processes (stage 10+) should map their pages as user-
+ * accessible from the start via paging_map_into(), not retrofit them.
+ */
+void paging_mark_user(uint32_t virt) {
+    uint32_t pd_idx = virt >> 22;
+    uint32_t pt_idx = (virt >> 12) & 0x3FF;
+
+    if (!(kernel_pd[pd_idx] & PDE_PRESENT)) {
+        kpanic("paging_mark_user: page not mapped", "");
+        return;
+    }
+
+    kernel_pd[pd_idx] |= PDE_USER;
+
+    uint32_t* pt = (uint32_t*)(uintptr_t)(kernel_pd[pd_idx] & ~0xFFF);
+    if (!(pt[pt_idx] & PTE_PRESENT)) {
+        kpanic("paging_mark_user: page not mapped", "");
+        return;
+    }
+    pt[pt_idx] |= PTE_USER;
+
+    tlb_flush(virt);
+}

@@ -14,8 +14,6 @@
 
 #define MULTIBOOT2_MAGIC 0x36D76289
 #define HEAP_PAGES       16    /* 16 × 4KB = 64KB kernel heap */
-#define MULTIBOOT2_MAGIC 0x36D76289
-#define HEAP_PAGES       16    /* 16 × 4KB = 64KB kernel heap */
 
 /* Write a string to the QEMU/Bochs debug console (I/O port 0xE9).
    Used by CI to confirm the kernel finished booting. */

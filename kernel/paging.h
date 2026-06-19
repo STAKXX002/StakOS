@@ -65,4 +65,15 @@ uint32_t paging_create_user_pd(void);
  */
 void paging_free_pd(uint32_t pd_phys);
 
+/*
+ * Mark an already-mapped page as accessible from CPL=3 (sets the U/S
+ * bit on both PDE and PTE). Needed for stage 9 test code that lives
+ * in the kernel's identity-mapped region — without this, every
+ * identity-mapped page is supervisor-only and any ring-3 access
+ * there takes a protection-violation page fault. Real user processes
+ * (stage 10+) should map pages as user-accessible from the start
+ * rather than retrofitting them this way.
+ */
+void paging_mark_user(uint32_t virt);
+
 #endif
