@@ -47,6 +47,7 @@ An interactive command-line shell with a readline loop, argv-style parsing, and 
 | `uptime` | ticks and seconds since boot |
 | `vminfo` | per-process virtual memory / CR3 info |
 | `synctest` | exercise the `int 0x80` syscall gate round-trip |
+| `usertest` | spawn a process and run it at ring 3 |
 
 ## Build
 
@@ -85,7 +86,7 @@ make clean
 - [x] Process model + round-robin scheduler
 - [x] Per-process virtual address spaces
 - [x] Syscall gate (kernel-mode)
-- [ ] User mode (ring 3) + TSS - running the existing syscall ABI from real user processes
+- [x] User mode (ring 3) + TSS - running the existing syscall ABI from real user processes
 - [ ] ELF loader
 - [ ] Virtual filesystem + ramfs
 - [ ] `fork` / `wait` / pipes

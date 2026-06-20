@@ -129,6 +129,8 @@ process_t* process_create(const char* name, void (*entry)(void), uint32_t priori
     /* Map both frames into the kernel address space so we can write to them.
        They're already identity-mapped (within our 32MB window), so
        kernel_stack_top = physical top of the upper frame. */
+    proc->stack_frame_lo   = stack_lo;
+    proc->stack_frame_hi   = stack_hi;
     proc->kernel_stack_top = stack_hi + PAGE_SIZE;  /* top of upper frame */
 
     /* Map both frames so they're accessible as a contiguous 8KB stack.
@@ -167,12 +169,32 @@ void process_exit(int32_t exit_code) {
     current_process->exit_code = exit_code;
     current_process->state     = PROCESS_ZOMBIE;
 
-    /* Remove from run queue and yield — never returns */
-    scheduler_dequeue(current_process);
+    /* Move to the zombie list instead of just dequeuing — we can't
+       free our own PCB/stack/page directory while still running on
+       them, so scheduler_tick() reaps us later from a safe context. */
+    scheduler_mark_zombie(current_process);
     scheduler_yield();
 
     /* Should never reach here */
     __asm__ volatile("cli; hlt");
+}
+
+/* ---- process_free ---- */
+
+/*
+ * Frees everything process_create() allocated: the two kernel-stack
+ * frames, the cloned page directory, and the PCB itself. Only ever
+ * called from scheduler_reap_zombies(), which guarantees we're never
+ * running as the process being freed.
+ */
+void process_free(process_t* proc) {
+    if (!proc) return;
+
+    pmm_free_frame(proc->stack_frame_lo);
+    pmm_free_frame(proc->stack_frame_hi);
+    paging_free_pd(proc->cr3);
+
+    kfree(proc);
 }
 
 /* ---- process_current ---- */

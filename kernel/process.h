@@ -56,6 +56,8 @@ typedef struct process {
 
     /* Per-process kernel stack — 2 PMM frames (8 KB), allocated in process_create */
     uint32_t         kernel_stack_top; /* virtual address of top of stack    */
+    uint32_t         stack_frame_lo;   /* physical frame — needed to free    */
+    uint32_t         stack_frame_hi;   /* physical frame — needed to free    */
 
     /* Intrusive linked list — scheduler queue */
     struct process*  next;
@@ -78,6 +80,13 @@ process_t* process_create(const char* name, void (*entry)(void), uint32_t priori
  * Never returns.
  */
 void process_exit(int32_t exit_code);
+
+/*
+ * Frees a process's resources: kernel stack frames, page directory,
+ * and the PCB itself. Only safe to call on a process that is not
+ * currently running — used by the scheduler's zombie reaper.
+ */
+void process_free(process_t* proc);
 
 /* Return the currently running process. */
 process_t* process_current(void);

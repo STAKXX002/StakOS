@@ -22,6 +22,15 @@ void scheduler_enqueue(process_t* proc);
 void scheduler_dequeue(process_t* proc);
 
 /*
+ * Move a process from the ready queue onto the zombie list. Called by
+ * process_exit() instead of scheduler_dequeue() directly — a zombie
+ * can't free its own PCB/stack/page directory (it's still running on
+ * them), so it stays discoverable here until scheduler_tick() reaps
+ * it safely from a different process's context.
+ */
+void scheduler_mark_zombie(process_t* proc);
+
+/*
  * Called by the PIT IRQ0 handler every timer tick (~10ms).
  * Decrements ticks_remaining; when it hits 0 performs a context switch
  * to the next READY process.

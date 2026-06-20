@@ -13,6 +13,15 @@ static process_t* queue_head = NULL;
 static process_t* queue_tail = NULL;
 static uint32_t   queue_size = 0;
 
+/*
+ * Zombie list — processes that called process_exit() but whose
+ * resources (PCB, kernel stack frames, page directory) can't be
+ * freed yet because they were still running on/using them at the
+ * moment they exited. scheduler_tick() reaps this list from a
+ * different process's context, where freeing is actually safe.
+ */
+static process_t* zombie_head = NULL;
+
 /* ---- queue operations ---- */
 
 void scheduler_enqueue(process_t* proc) {
@@ -59,7 +68,38 @@ void scheduler_dequeue(process_t* proc) {
     __asm__ volatile("push %0; popf" : : "r"(flags));
 }
 
-/* ---- scheduler_init ---- */
+void scheduler_mark_zombie(process_t* proc) {
+    if (!proc) return;
+
+    /* Take it out of the run queue first (same logic as dequeue),
+       then push it onto the zombie list instead of discarding it. */
+    scheduler_dequeue(proc);
+
+    uint32_t flags;
+    __asm__ volatile("pushf; pop %0; cli" : "=r"(flags));
+
+    proc->next  = zombie_head;
+    zombie_head = proc;
+
+    __asm__ volatile("push %0; popf" : : "r"(flags));
+}
+
+/* ---- scheduler_reap_zombies ---- */
+
+/*
+ * Frees every process currently on the zombie list. Called from
+ * scheduler_tick(), which always runs as whichever process the timer
+ * interrupted — never as the zombie itself, so freeing its stack and
+ * page directory here is safe.
+ */
+static void scheduler_reap_zombies(void) {
+    while (zombie_head) {
+        process_t* z = zombie_head;
+        zombie_head  = z->next;
+
+        process_free(z);   /* frees PCB, kernel stack frames, page dir */
+    }
+}
 
 void scheduler_init(void) {
     queue_head = NULL;
@@ -157,6 +197,10 @@ static void do_switch(process_t* next) {
 void scheduler_tick(void) {
     process_t* cur = process_current();
     if (!cur) return;
+
+    /* Free any processes that exited since the last tick. Safe here —
+       we're never running as the zombie itself at this point. */
+    scheduler_reap_zombies();
 
     /* Wake any sleeping processes in the queue */
     process_t* p = queue_head;
