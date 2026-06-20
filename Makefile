@@ -20,6 +20,7 @@ C_SRCS = \
     kernel/scheduler.c \
     kernel/pit.c \
     kernel/syscall.c \
+    kernel/elf.c \
     shell/shell.c \
     shell/commands.c \
     mm/kmalloc.c \
@@ -30,7 +31,8 @@ ASM_SRCS = \
 	boot/gdt_flush.asm \
 	boot/isr.asm \
 	boot/context_switch.asm \
-	boot/usermode.asm
+	boot/usermode.asm \
+	boot/test_prog_blob.asm
 
 # Object files inside build/
 C_OBJS   = $(patsubst %.c,build/%.o,$(C_SRCS))
@@ -44,6 +46,26 @@ ISO    = build/stakos.iso
 .PHONY: all clean iso run
 
 all: $(KERNEL)
+
+# ---- Userland test program (stage 10) ----
+# A minimal freestanding ELF32 binary, embedded into the kernel image
+# via incbin so the ELF loader has something real to parse and run
+# before a filesystem exists.
+USER_CFLAGS = -ffreestanding -nostdlib -m32
+
+build/userland/test_prog.o: userland/test_prog.c
+	@mkdir -p $(dir $@)
+	$(CC) $(USER_CFLAGS) -c $< -o $@
+
+build/userland/test_prog.elf: build/userland/test_prog.o userland/test_prog.ld
+	i686-elf-ld -m elf_i386 -T userland/test_prog.ld $< -o $@
+
+# The blob object MUST be built after test_prog.elf exists, since
+# test_prog_blob.asm directly incbins it. This explicit dependency
+# is what makes `make` build the userland ELF first automatically.
+build/boot/test_prog_blob.o: boot/test_prog_blob.asm build/userland/test_prog.elf
+	@mkdir -p $(dir $@)
+	$(AS) $(ASFLAGS) $< -o $@
 
 # Compile C
 build/%.o: %.c
