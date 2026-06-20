@@ -67,4 +67,12 @@ const elf32_phdr_t* elf32_get_phdr(const uint8_t* data, uint32_t i);
 /* Number of program headers in the image. 0 if data is not validated. */
 uint32_t elf32_phdr_count(const uint8_t* data);
 
+/*
+ * Loads every PT_LOAD segment from `data` into the page directory at
+ * `pd_phys`. Allocates fresh physical frames and copies file data,
+ * zero-filling memsz-filesz (e.g. .bss). pd_phys does not need to be
+ * the live CR3. Returns 1 on success, 0 on OOM.
+ */
+int elf32_load(const uint8_t* data, uint32_t pd_phys);
+
 #endif

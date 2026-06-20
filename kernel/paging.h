@@ -76,4 +76,19 @@ void paging_free_pd(uint32_t pd_phys);
  */
 void paging_mark_user(uint32_t virt);
 
+/*
+ * Maps a virtual page to a physical frame inside an ARBITRARY page
+ * directory — not necessarily the one currently loaded in CR3.
+ *
+ * This is what the ELF loader needs: it builds a new process's
+ * address space while the caller (e.g. the shell) is still running
+ * on its own CR3. Allocates a new page table on demand if the PDE
+ * for this virtual address isn't present yet.
+ *
+ * `flags` should be some combination of PTE_PRESENT | PTE_WRITABLE |
+ * PTE_USER. The PDE gets PDE_USER too if PTE_USER is set, since the
+ * CPU requires both to permit a ring-3 access.
+ */
+void paging_map_into(uint32_t pd_phys, uint32_t virt, uint32_t phys, uint32_t flags);
+
 #endif

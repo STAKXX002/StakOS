@@ -150,3 +150,35 @@ void paging_mark_user(uint32_t virt) {
 
     tlb_flush(virt);
 }
+
+void paging_map_into(uint32_t pd_phys, uint32_t virt, uint32_t phys, uint32_t flags) {
+    uint32_t pd_idx = virt >> 22;
+    uint32_t pt_idx = (virt >> 12) & 0x3FF;
+
+    /* pd_phys is identity-mapped (every frame the PMM hands out is,
+       within our 32MB window), so we can dereference it directly
+       regardless of whether it's the live CR3 right now. */
+    uint32_t* pd = (uint32_t*)(uintptr_t)pd_phys;
+
+    if (!(pd[pd_idx] & PDE_PRESENT)) {
+        uint32_t pt_phys = pmm_alloc_frame();
+        if (!pt_phys) {
+            kpanic("paging_map_into: out of physical memory", "");
+            return;
+        }
+        uint32_t* pt = (uint32_t*)(uintptr_t)pt_phys;
+        for (int i = 0; i < PT_ENTRIES; i++) pt[i] = 0;
+
+        uint32_t pde_flags = PDE_PRESENT | PDE_WRITABLE;
+        if (flags & PTE_USER) pde_flags |= PDE_USER;
+
+        pd[pd_idx] = pt_phys | pde_flags;
+    } else if (flags & PTE_USER) {
+        pd[pd_idx] |= PDE_USER;
+    }
+
+    uint32_t* pt = (uint32_t*)(uintptr_t)(pd[pd_idx] & ~0xFFF);
+    pt[pt_idx] = (phys & ~0xFFF) | flags;
+
+    tlb_flush(virt);
+}
