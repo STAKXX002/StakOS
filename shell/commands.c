@@ -506,6 +506,39 @@ void cmd_usertest(int argc, char** argv) {
     kprint(" - watch for its output on the next scheduler tick\n");
 }
 
+#include "../kernel/elf.h"
+
+/* Embedded test ELF — see boot/test_prog_blob.asm */
+extern const uint8_t test_prog_blob[];
+
+/*
+ * cmd_elftest — the real pipeline. Unlike usertest (which hand-built
+ * a CPL=3 function and stack from kernel-side static arrays),
+ * this loads an actual ELF32 binary via process_create_from_elf(),
+ * proving elf32_validate + elf32_load + paging_map_into + the ring-3
+ * trampoline all work together end to end.
+ */
+void cmd_elftest(int argc, char** argv) {
+    (void)argc; (void)argv;
+
+    vga_set_color(VGA_COLOR_LIGHT_CYAN);
+    kprint("ELF loader test\n");
+    vga_set_color(VGA_COLOR_LIGHT_GREY);
+    kprint("  loading embedded test_prog.elf...\n");
+
+    process_t* p = process_create_from_elf("elftest", test_prog_blob, 5);
+    if (!p) {
+        kprint("  process_create_from_elf failed\n");
+        return;
+    }
+
+    kprint("  spawned pid=");
+    kprint_int((int32_t)p->pid);
+    kprint(" entry=");
+    kprint_hex(p->user_entry);
+    kprint(" - watch for its output on the next scheduler tick\n");
+}
+
 /* ---- command table ---- */
 
 const command_t commands[] = {
@@ -523,5 +556,6 @@ const command_t commands[] = {
     { "vminfo",   "show virtual memory info",              cmd_vminfo   },
     { "synctest", "exercise int 0x80 syscall gate",        cmd_synctest },
     { "usertest", "spawn a process and run it at ring 3",   cmd_usertest },
+    { "elftest",  "load and run the embedded test ELF binary", cmd_elftest },
     { NULL, NULL, NULL }   /* sentinel */
 };

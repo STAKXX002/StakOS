@@ -59,6 +59,15 @@ typedef struct process {
     uint32_t         stack_frame_lo;   /* physical frame — needed to free    */
     uint32_t         stack_frame_hi;   /* physical frame — needed to free    */
 
+    /*
+     * Set only for processes started via process_create_from_elf().
+     * user_entry is 0 for ordinary kernel-mode processes (idle, the
+     * stage 8/9 test processes) — the trampoline checks this to know
+     * whether it should jump to ring 3 at all.
+     */
+    uint32_t         user_entry;       /* ELF entry point (virtual addr)     */
+    uint32_t         user_stack_top;   /* top of the mapped user stack       */
+
     /* Intrusive linked list — scheduler queue */
     struct process*  next;
 } process_t;
@@ -73,6 +82,20 @@ void process_init(void);
  * Returns the new process_t* or NULL if out of memory.
  */
 process_t* process_create(const char* name, void (*entry)(void), uint32_t priority);
+
+/*
+ * Creates a process that runs `elf_data` at ring 3.
+ *
+ * Loads every PT_LOAD segment into a fresh page directory (via
+ * elf32_load), maps a 4-page user stack alongside it, and arranges
+ * for the process's first scheduled run to jump straight to CPL=3 at
+ * the ELF's entry point — replacing the hand-written usertest_launcher
+ * pattern from stage 9 with a real, data-driven loader.
+ *
+ * Returns the new process_t*, or NULL on invalid ELF / OOM.
+ */
+process_t* process_create_from_elf(const char* name, const uint8_t* elf_data,
+                                    uint32_t priority);
 
 /*
  * Terminate the current process with `exit_code`.

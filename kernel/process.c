@@ -4,6 +4,9 @@
 #include "pmm.h"
 #include "../mm/kmalloc.h"
 #include "paging.h"
+#include "elf.h"
+#include "gdt.h"
+#include "usermode.h"
 #include <stddef.h>
 
 /* Defined in boot/boot.asm — top of the 16KB boot-time kernel stack.
@@ -159,6 +162,91 @@ process_t* process_create(const char* name, void (*entry)(void), uint32_t priori
     proc->esp = (uint32_t)stack;
 
     scheduler_enqueue(proc);
+
+    return proc;
+}
+
+/* ---- user_mode_trampoline ---- */
+
+/*
+ * Entry function for every process started via process_create_from_elf().
+ * Runs once, in kernel mode, the first time the scheduler switches to
+ * this process — same as any other process_create() entry function.
+ *
+ * Its only job is what usertest_launcher did by hand in stage 9: set
+ * the TSS's esp0 (belt-and-suspenders — do_switch already did this,
+ * but it's free insurance against future scheduler changes), mark the
+ * already-loaded ELF segments and user stack as ring-3 accessible
+ * in THIS process's own page directory (paging_mark_user patches the
+ * live CR3, which is correct here since we ARE that process by the
+ * time this runs), then jump to user_entry via enter_usermode.
+ *
+ * Reads user_entry/user_stack_top from current_process rather than
+ * taking parameters, since process_create()'s entry signature is a
+ * fixed void(*)(void) — there's no other way to pass this data through
+ * the existing context-switch machinery without changing that ABI.
+ */
+static void user_mode_trampoline(void) {
+    process_t* self = process_current();
+
+    tss_set_kernel_stack(self->kernel_stack_top);
+
+    /* The ELF's segments and the user stack were mapped by
+       process_create_from_elf() with PTE_USER already set, but the
+       PDE-level USER bit only gets set on tables created AFTER that
+       flag was known — paging_map_into() handles this correctly at
+       map time, so no separate paging_mark_user() pass is needed
+       here the way stage 9's hand-built test required it. */
+
+    enter_usermode(self->user_entry, self->user_stack_top);
+    /* unreachable */
+}
+
+/* ---- process_create_from_elf ---- */
+
+#define USER_STACK_PAGES 4   /* 16 KB user stack */
+#define USER_STACK_BASE  0x500000  /* arbitrary — well above where any
+                                       PT_LOAD segment in our test binary
+                                       lives (0x400000), no collision */
+
+process_t* process_create_from_elf(const char* name, const uint8_t* elf_data,
+                                    uint32_t priority) {
+    uint32_t entry;
+    if (!elf32_validate(elf_data, &entry)) return NULL;
+
+    process_t* proc = process_create(name, user_mode_trampoline, priority);
+    if (!proc) return NULL;
+
+    if (!elf32_load(elf_data, proc->cr3)) {
+        /* Resources allocated by process_create so far (PCB, kernel
+           stack, page directory) are still valid — let the normal
+           exit/reap path handle them rather than duplicating cleanup
+           here. Marking ZOMBIE directly (not via process_exit, since
+           we're not running AS this process) and leaving it for the
+           reaper is simplest. */
+        proc->state = PROCESS_ZOMBIE;
+        scheduler_mark_zombie(proc);
+        return NULL;
+    }
+
+    /* Map a user stack right after the segments — separate frames,
+       separate mapping call, same target page directory. */
+    uint32_t stack_top = USER_STACK_BASE;
+    for (uint32_t i = 0; i < USER_STACK_PAGES; i++) {
+        uint32_t frame = pmm_alloc_frame();
+        if (!frame) {
+            proc->state = PROCESS_ZOMBIE;
+            scheduler_mark_zombie(proc);
+            return NULL;
+        }
+        uint32_t va = USER_STACK_BASE + i * PAGE_SIZE;
+        paging_map_into(proc->cr3, va, frame,
+                         PTE_PRESENT | PTE_WRITABLE | PTE_USER);
+        stack_top = va + PAGE_SIZE;
+    }
+
+    proc->user_entry     = entry;
+    proc->user_stack_top = stack_top;  /* top of the LAST mapped page */
 
     return proc;
 }

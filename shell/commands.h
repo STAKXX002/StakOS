@@ -27,5 +27,6 @@ void cmd_uptime   (int argc, char** argv);
 void cmd_vminfo   (int argc, char** argv);
 void cmd_synctest (int argc, char** argv);
 void cmd_usertest (int argc, char** argv);
+void cmd_elftest  (int argc, char** argv);
 
 #endif
