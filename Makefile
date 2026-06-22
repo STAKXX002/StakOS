@@ -22,7 +22,12 @@ C_SRCS = \
     kernel/syscall.c \
     kernel/elf.c \
     shell/shell.c \
+    shell/sh_util.c \
     shell/commands.c \
+    shell/commands_core.c \
+    shell/commands_mem.c \
+    shell/commands_proc.c \
+    shell/commands_user.c \
     mm/kmalloc.c \
     drivers/keyboard.c
 
