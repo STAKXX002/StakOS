@@ -25,5 +25,6 @@ const command_t commands[] = {
     { "synctest", "exercise int 0x80 syscall gate",             cmd_synctest },
     { "usertest", "spawn a process and run it at ring 3",       cmd_usertest },
     { "elftest",  "load and run the embedded test ELF binary",  cmd_elftest  },
+    { "fstest",   "exercise SYS_OPEN/READ/CLOSE against ramfs", cmd_fstest   },
     { NULL, NULL, NULL }   /* sentinel */
 };

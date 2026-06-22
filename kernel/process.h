@@ -5,6 +5,7 @@
 
 #define STACK_SIZE      8192    /* 8 KB per-process kernel stack */
 #define MAX_PROCESSES   16      /* max concurrent processes for now */
+#define MAX_FDS_PER_PROCESS 8   /* small and fixed for now — no dynamic growth */
 
 typedef enum {
     PROCESS_READY,      /* in run queue, wants CPU                      */
@@ -13,6 +14,18 @@ typedef enum {
     PROCESS_ZOMBIE,     /* exited, waiting for parent to reap           */
     PROCESS_DEAD        /* fully cleaned up, PCB slot reclaimable       */
 } process_state_t;
+
+/*
+ * A single open-file entry in a process's fd table.
+ * file_idx is the ramfs file table index (see kernel/ramfs.h);
+ * offset is how many bytes have been read so far via this fd.
+ * in_use == 0 means this slot is free.
+ */
+typedef struct {
+    int      in_use;
+    int      file_idx;
+    uint32_t offset;
+} fd_entry_t;
 
 /*
  * Saved CPU context — exactly the registers we push/pop on context switch.
@@ -67,6 +80,15 @@ typedef struct process {
      */
     uint32_t         user_entry;       /* ELF entry point (virtual addr)     */
     uint32_t         user_stack_top;   /* top of the mapped user stack       */
+
+    /*
+     * Per-process file descriptor table. fd 0/1/2 are reserved by
+     * convention (stdin/stdout/stderr) but not populated here yet —
+     * SYS_WRITE still special-cases fd==1 directly rather than going
+     * through this table. Real files opened via SYS_OPEN start at the
+     * first free slot, which in practice means fd 3 onward for now.
+     */
+    fd_entry_t       fds[MAX_FDS_PER_PROCESS];
 
     /* Intrusive linked list — scheduler queue */
     struct process*  next;

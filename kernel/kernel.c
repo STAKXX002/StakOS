@@ -8,6 +8,7 @@
 #include "pit.h"
 #include "io.h"
 #include "syscall_wrapper.h"
+#include "ramfs.h"
 #include "../mm/kmalloc.h"
 #include "../drivers/keyboard.h"
 #include "../shell/shell.h"
@@ -58,6 +59,14 @@ void kernel_main(uint32_t magic, uint32_t mboot_ptr) {
     process_init();
     scheduler_init();
     pit_init(100);      /* 100 Hz = 10ms tick */
+
+    /* Stage 11: ramfs — register the embedded test ELF (see
+       boot/test_prog_blob.asm) as a real file. test_prog_blob_size
+       is set by the assembler to the binary's exact byte length. */
+    extern const uint8_t test_prog_blob[];
+    extern const uint32_t test_prog_blob_size;
+    ramfs_init();
+    ramfs_register("test.elf", test_prog_blob, test_prog_blob_size);
 
     debug_print("STAKOS_BOOT_OK\n");
     shell_run();        /* never returns */

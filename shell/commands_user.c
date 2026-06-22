@@ -152,3 +152,44 @@ void cmd_elftest(int argc, char** argv) {
     kprint_hex(p->user_entry);
     kprint(" - watch for its output on the next scheduler tick\n");
 }
+
+/* ---- fstest ---- */
+
+/*
+ * cmd_fstest — exercises SYS_OPEN/SYS_READ/SYS_CLOSE from kernel
+ * mode, against the same ramfs that elftest's binary is registered
+ * in. Proves the fd table and ramfs lookup work before testing the
+ * same path from genuine ring 3 in a later stage.
+ */
+void cmd_fstest(int argc, char** argv) {
+    (void)argc; (void)argv;
+
+    vga_set_color(VGA_COLOR_LIGHT_CYAN);
+    kprint("Filesystem test\n");
+    vga_set_color(VGA_COLOR_LIGHT_GREY);
+
+    int fd = do_sys_open("test.elf");
+    kprint("  open(\"test.elf\") = ");
+    kprint_int(fd);
+    kprint(fd >= 0 ? "  [OK]\n" : "  [FAIL]\n");
+    if (fd < 0) return;
+
+    uint8_t buf[16];
+    uint32_t n = do_sys_read(fd, buf, sizeof(buf));
+    kprint("  read() = ");
+    kprint_int((int32_t)n);
+    kprint(" bytes: ");
+    for (uint32_t i = 0; i < n; i++) {
+        char hc = "0123456789abcdef"[(buf[i] >> 4) & 0xF];
+        char lc = "0123456789abcdef"[buf[i] & 0xF];
+        vga_putchar(hc);
+        vga_putchar(lc);
+        vga_putchar(' ');
+    }
+    kprint("\n");
+
+    int closed = do_sys_close(fd);
+    kprint("  close() = ");
+    kprint_int(closed);
+    kprint(closed == 0 ? "  [OK]\n" : "  [FAIL]\n");
+}

@@ -37,4 +37,16 @@ static inline void do_sys_yield(void) {
     syscall3(SYS_YIELD, 0, 0, 0);
 }
 
+static inline int do_sys_open(const char* path) {
+    return (int)syscall3(SYS_OPEN, (uint32_t)path, 0, 0);
+}
+
+static inline uint32_t do_sys_read(int fd, void* buf, uint32_t len) {
+    return syscall3(SYS_READ, (uint32_t)fd, (uint32_t)buf, len);
+}
+
+static inline int do_sys_close(int fd) {
+    return (int)syscall3(SYS_CLOSE, (uint32_t)fd, 0, 0);
+}
+
 #endif

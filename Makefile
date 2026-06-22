@@ -21,6 +21,7 @@ C_SRCS = \
     kernel/pit.c \
     kernel/syscall.c \
     kernel/elf.c \
+    kernel/ramfs.c \
     shell/shell.c \
     shell/sh_util.c \
     shell/commands.c \
