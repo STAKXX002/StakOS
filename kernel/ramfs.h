@@ -39,4 +39,11 @@ int ramfs_lookup(const char* name);
 /* Returns the file_t at `index`, or NULL if index is out of range or unused. */
 const ramfs_file_t* ramfs_get(int index);
 
+/*
+ * Returns the highest valid index + 1 — i.e. callers can iterate
+ * `for (int i = 0; i < ramfs_capacity(); i++)` and check ramfs_get(i)
+ * for NULL to skip unused slots. Used by the shell's `ls` command.
+ */
+int ramfs_capacity(void);
+
 #endif

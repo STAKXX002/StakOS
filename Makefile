@@ -29,6 +29,7 @@ C_SRCS = \
     shell/commands_mem.c \
     shell/commands_proc.c \
     shell/commands_user.c \
+    shell/commands_fs.c \
     mm/kmalloc.c \
     drivers/keyboard.c
 

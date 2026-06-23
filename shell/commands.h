@@ -29,5 +29,7 @@ void cmd_synctest (int argc, char** argv);
 void cmd_usertest (int argc, char** argv);
 void cmd_elftest  (int argc, char** argv);
 void cmd_fstest   (int argc, char** argv);
+void cmd_ls       (int argc, char** argv);
+void cmd_run      (int argc, char** argv);
 
 #endif

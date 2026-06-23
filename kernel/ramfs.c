@@ -54,3 +54,7 @@ const ramfs_file_t* ramfs_get(int index) {
     if (!files[index].in_use) return NULL;
     return &files[index];
 }
+
+int ramfs_capacity(void) {
+    return RAMFS_MAX_FILES;
+}

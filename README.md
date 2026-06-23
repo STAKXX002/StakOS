@@ -88,7 +88,7 @@ make clean
 - [x] Syscall gate (kernel-mode)
 - [x] User mode (ring 3) + TSS - running the existing syscall ABI from real user processes
 - [x] ELF loader
-- [ ] Virtual filesystem + ramfs
+- [x] Virtual filesystem + ramfs
 - [ ] `fork` / `wait` / pipes
 
 ## Why
