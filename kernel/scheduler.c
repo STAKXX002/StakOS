@@ -177,22 +177,36 @@ process_t* scheduler_queue_head(void) {
 static process_t* pick_next(void) {
     if (!queue_head) return NULL;
 
-    /* Rotate: take from head, put at tail */
-    process_t* next = queue_head;
-    queue_head = next->next;
-    if (!queue_head) queue_tail = NULL;
-    next->next = NULL;
+    uint32_t checked = 0;
+    
+    /* Rotate through the queue elements to find a task with a READY state status */
+    while (checked < queue_size) {
+        process_t* next = queue_head;
+        
+        /* Pop current head */
+        queue_head = next->next;
+        if (!queue_head) queue_tail = NULL;
+        next->next = NULL;
 
-    /* Re-enqueue at tail */
-    if (!queue_head) {
-        queue_head = next;
-        queue_tail = next;
-    } else {
-        queue_tail->next = next;
-        queue_tail       = next;
+        /* Re-enqueue immediately at the tail to maintain round-robin circulation */
+        if (!queue_head) {
+            queue_head = next;
+            queue_tail = next;
+        } else {
+            queue_tail->next = next;
+            queue_tail       = next;
+        }
+
+        checked++;
+        
+        /* If this process is genuinely READY to execute, return it */
+        if (next->state == PROCESS_READY) {
+            return next;
+        }
     }
 
-    return next;
+    /* If nothing else is explicitly READY, return NULL (scheduler switches back to current or idle) */
+    return NULL;
 }
 
 /* ---- do_switch ---- */
