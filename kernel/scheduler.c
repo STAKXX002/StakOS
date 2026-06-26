@@ -87,17 +87,54 @@ void scheduler_mark_zombie(process_t* proc) {
 /* ---- scheduler_reap_zombies ---- */
 
 /*
- * Frees every process currently on the zombie list. Called from
- * scheduler_tick(), which always runs as whichever process the timer
- * interrupted — never as the zombie itself, so freeing its stack and
- * page directory here is safe.
+ * Helper function to check if a process ID is still alive in the active scheduler 
+ * queue or currently running on the CPU.
+ */
+static int is_pid_alive(uint32_t pid) {
+    if (pid == 0) return 1; /* The idle/shell task is always treated as alive */
+    
+    process_t* cur = process_current();
+    if (cur && cur->pid == pid) return 1;
+
+    process_t* p = scheduler_queue_head();
+    while (p) {
+        if (p->pid == pid) return 1;
+        p = p->next;
+    }
+    return 0;
+}
+
+/*
+ * Walks the zombie list and reaps orphan processes whose parents have already 
+ * exited. If a zombie's parent is still alive, its state, PCB metadata, and 
+ * exit code are preserved intact so the parent can collect them via wait() later.
+ *
+ * Called from scheduler_tick(), which always runs in the interrupt context of 
+ * whichever process the timer suspended—never as the zombie itself. This guarantees 
+ * that freeing its kernel stack and page directory is completely safe.
  */
 static void scheduler_reap_zombies(void) {
-    while (zombie_head) {
-        process_t* z = zombie_head;
-        zombie_head  = z->next;
+    process_t* prev = NULL;
+    process_t* cur  = zombie_head;
 
-        process_free(z);   /* frees PCB, kernel stack frames, page dir */
+    while (cur) {
+        if (!is_pid_alive(cur->parent_pid)) {
+            /* Parent is dead or missing, this is an orphan. Auto-reap resources safely */
+            process_t* orphan = cur;
+            cur = cur->next;
+
+            if (prev) {
+                prev->next = cur;
+            } else {
+                zombie_head = cur;
+            }
+
+            process_free(orphan);
+        } else {
+            /* Parent is still active; retain the zombie state for a future wait() call */
+            prev = cur;
+            cur  = cur->next;
+        }
     }
 }
 
