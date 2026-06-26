@@ -50,6 +50,7 @@ void process_init(void) {
      */
     idle_pcb.pid      = next_pid++;
     idle_pcb.state    = PROCESS_RUNNING;   /* we ARE the idle task right now */
+    idle_pcb.parent_pid = 0;               /* idle has no parent */
     idle_pcb.priority = 0;                 /* lowest possible */
     idle_pcb.ticks_remaining = 1;
     idle_pcb.sleep_ticks     = 0;
@@ -107,6 +108,7 @@ process_t* process_create(const char* name, void (*entry)(void), uint32_t priori
     }
 
     proc->pid             = next_pid++;
+    proc->parent_pid      = current_process ? current_process->pid : 0;
     proc->state           = PROCESS_READY;
     proc->priority        = (priority == 0) ? 1 : priority;
     proc->ticks_remaining = proc->priority;

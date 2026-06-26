@@ -54,18 +54,19 @@ typedef struct process {
     process_state_t  state;
 
     /* CPU context — valid when process is not RUNNING */
-    uint32_t         esp;           /* saved stack pointer                  */
-    uint32_t         cr3;           /* physical address of page dir     */
+    uint32_t         esp;           /* saved stack pointer */
+    uint32_t         cr3;           /* physical address of page dir */
+    uint32_t         parent_pid;    /* track who spawned this process */
 
     /* Scheduling */
-    uint32_t         priority;      /* 1 (low) – 10 (high); default 5      */
-    uint32_t         ticks_remaining; /* counts down each PIT tick          */
+    uint32_t         priority;      /* 1 (low) – 10 (high); default 5 */
+    uint32_t         ticks_remaining; /* counts down each PIT tick */
 
     /* Sleep support */
-    uint32_t         sleep_ticks;   /* >0 means BLOCKED waiting for timer   */
+    uint32_t         sleep_ticks;   /* >0 means BLOCKED waiting for timer */
 
     /* Exit */
-    int32_t          exit_code;     /* set by process_exit()                */
+    int32_t          exit_code;     /* set by process_exit() */
 
     /* Per-process kernel stack — 2 PMM frames (8 KB), allocated in process_create */
     uint32_t         kernel_stack_top; /* virtual address of top of stack    */
