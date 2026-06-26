@@ -91,7 +91,7 @@ void cmd_run(int argc, char** argv) {
     vga_set_color(VGA_COLOR_LIGHT_GREEN);
     kprint("run: spawned pid=");
     kprint_int((int32_t)p->pid);
-    kprint(" entry=0x");
+    kprint(" entry=");
     kprint_hex(p->user_entry);
     kprint("\n");
     vga_set_color(VGA_COLOR_LIGHT_GREY);
