@@ -94,7 +94,31 @@ uint32_t paging_create_user_pd(void) {
 }
 
 void paging_free_pd(uint32_t pd_phys) {
-    if (pd_phys) pmm_free_frame(pd_phys);
+    if (!pd_phys) return;
+
+    uint32_t* pd = (uint32_t*)(uintptr_t)pd_phys;
+
+    /* Walk entries from IDENTITY_PT_COUNT up to 1023 (User-space boundary).
+       Entries 0 to IDENTITY_PT_COUNT-1 map the shared kernel space and must NOT be freed! */
+    for (uint32_t i = IDENTITY_PT_COUNT; i < PD_ENTRIES; i++) {
+        if (pd[i] & PDE_PRESENT) {
+            uint32_t pt_phys = pd[i] & ~0xFFF;
+            uint32_t* pt = (uint32_t*)(uintptr_t)pt_phys;
+
+            /* Walk through the active page table entries and free raw memory frames */
+            for (uint32_t j = 0; j < PT_ENTRIES; j++) {
+                if (pt[j] & PTE_PRESENT) {
+                    uint32_t frame_phys = pt[j] & ~0xFFF;
+                    pmm_free_frame(frame_phys);
+                }
+            }
+            /* Free the physical page table frame itself */
+            pmm_free_frame(pt_phys);
+        }
+    }
+
+    /* Finally, free the top-level page directory frame */
+    pmm_free_frame(pd_phys);
 }
 
 /*
