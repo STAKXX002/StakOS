@@ -92,11 +92,11 @@ void isr_handler(registers_t* r) {
         __asm__ volatile("mov %%cr2, %0" : "=r"(fault_addr));
 
         vga_set_color(VGA_COLOR_LIGHT_RED);
-        kprint("\n[PAGE FAULT] addr=0x");
+        kprint("\n[PAGE FAULT] addr=");
         kprint_hex(fault_addr);
         kprint("  err=");
         kprint_hex(r->err_code);
-        kprint("  eip=0x");
+        kprint("  eip=");
         kprint_hex(r->eip);
 
         /* Decode error code bits */
