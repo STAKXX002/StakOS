@@ -60,7 +60,7 @@ static void vminfo_print_proc(process_t* p, uint32_t live_cr3) {
     while (n[len]) len++;
     kprint(n);
     for (uint32_t i = len; i < 16; i++) kprint(" ");
-    kprint("0x"); kprint_hex(p->cr3);
+    kprint_hex(p->cr3);
     kprint("  ");
     if (p->cr3 == live_cr3)
         kprint("<-- live");
@@ -80,8 +80,8 @@ void cmd_vminfo(int argc, char** argv) {
     vga_set_color(VGA_COLOR_LIGHT_CYAN);
     kprint("Virtual memory\n");
     vga_set_color(VGA_COLOR_LIGHT_GREY);
-    kprint("  kernel_pd_phys : 0x"); kprint_hex(kernel_pd_phys); kprint("\n");
-    kprint("  live CR3       : 0x"); kprint_hex(live_cr3);        kprint("\n\n");
+    kprint("  kernel_pd_phys : "); kprint_hex(kernel_pd_phys); kprint("\n");
+    kprint("  live CR3       : "); kprint_hex(live_cr3);        kprint("\n\n");
 
     vga_set_color(VGA_COLOR_LIGHT_CYAN);
     kprint("PID  NAME              CR3         NOTE\n");
