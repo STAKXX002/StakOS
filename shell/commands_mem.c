@@ -2,6 +2,7 @@
 #include "sh_util.h"
 #include "../kernel/vga.h"
 #include "../kernel/pmm.h"
+#include "../kernel/paging.h"
 #include "../mm/kmalloc.h"
 #include <stdint.h>
 
@@ -54,7 +55,7 @@ void cmd_memtest(int argc, char** argv) {
         }
         kprint("  alloc[");
         kprint_int((int32_t)i);
-        kprint("] = 0x");
+        kprint("] = ");
         kprint_hex(frames[i]);
         kprint("\n");
     }
@@ -96,11 +97,13 @@ void cmd_hexdump(int argc, char** argv) {
     uint32_t addr = sh_strtoul(argv[1], 16);
     uint32_t len  = sh_strtoul(argv[2], 10);
 
-    uint32_t max_mapped = 32 * 1024 * 1024; // 32 MB (0x2000000)
+    uint32_t max_mapped = IDENTITY_MAPPED_BYTES;
 
     if (addr > max_mapped || len > max_mapped - addr) {
         vga_set_color(VGA_COLOR_LIGHT_RED);
-        kprint("hexdump: address range outside mapped memory (0x0-0x2000000)\n");
+        kprint("hexdump: address range outside mapped memory (0x0-");
+        kprint_hex(max_mapped);
+        kprint(")\n");
         vga_set_color(VGA_COLOR_LIGHT_GREY);
         return;
     }

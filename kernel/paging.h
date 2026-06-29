@@ -2,6 +2,7 @@
 #define PAGING_H
 
 #include <stdint.h>
+#include "pmm.h"   /* for PAGE_SIZE, used by IDENTITY_MAPPED_BYTES below */
 
 /*
  * x86 32-bit paging (non-PAE):
@@ -27,6 +28,14 @@
 /* Number of entries in a page directory / page table */
 #define PD_ENTRIES      1024
 #define PT_ENTRIES      1024
+
+/* Number of 4MB windows identity-mapped at boot (see paging_init).
+ * 32MB / 4MB = 8. This must match the -m flag passed to qemu in the
+ * Makefile/CI — there's no way to derive one from the other, so if
+ * you raise -m, raise this too.
+ */
+#define IDENTITY_PT_COUNT     8
+#define IDENTITY_MAPPED_BYTES (IDENTITY_PT_COUNT * PT_ENTRIES * PAGE_SIZE)
 
 /* A page table: 1024 4-byte PTEs */
 typedef uint32_t page_table_t[PT_ENTRIES];
@@ -64,17 +73,6 @@ uint32_t paging_create_user_pd(void);
  * or frames — that's the job of the VM region tracker (stage 7c+).
  */
 void paging_free_pd(uint32_t pd_phys);
-
-/*
- * Mark an already-mapped page as accessible from CPL=3 (sets the U/S
- * bit on both PDE and PTE). Needed for stage 9 test code that lives
- * in the kernel's identity-mapped region — without this, every
- * identity-mapped page is supervisor-only and any ring-3 access
- * there takes a protection-violation page fault. Real user processes
- * (stage 10+) should map pages as user-accessible from the start
- * rather than retrofitting them this way.
- */
-void paging_mark_user(uint32_t virt);
 
 /*
  * Maps a virtual page to a physical frame inside an ARBITRARY page
