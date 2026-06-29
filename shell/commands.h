@@ -26,7 +26,6 @@ void cmd_sleep    (int argc, char** argv);
 void cmd_uptime   (int argc, char** argv);
 void cmd_vminfo   (int argc, char** argv);
 void cmd_synctest (int argc, char** argv);
-void cmd_usertest (int argc, char** argv);
 void cmd_elftest  (int argc, char** argv);
 void cmd_fstest   (int argc, char** argv);
 void cmd_ls       (int argc, char** argv);

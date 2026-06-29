@@ -112,8 +112,8 @@ process_t* process_create(const char* name, void (*entry)(void), uint32_t priori
  * Loads every PT_LOAD segment into a fresh page directory (via
  * elf32_load), maps a 4-page user stack alongside it, and arranges
  * for the process's first scheduled run to jump straight to CPL=3 at
- * the ELF's entry point — replacing the hand-written usertest_launcher
- * pattern from stage 9 with a real, data-driven loader.
+ * the ELF's entry point — replacing the old hand-written stage-9
+ * ring-3 test pattern with a real, data-driven loader.
  *
  * Returns the new process_t*, or NULL on invalid ELF / OOM.
  */

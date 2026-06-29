@@ -175,13 +175,12 @@ process_t* process_create(const char* name, void (*entry)(void), uint32_t priori
  * Runs once, in kernel mode, the first time the scheduler switches to
  * this process — same as any other process_create() entry function.
  *
- * Its only job is what usertest_launcher did by hand in stage 9: set
- * the TSS's esp0 (belt-and-suspenders — do_switch already did this,
- * but it's free insurance against future scheduler changes), mark the
- * already-loaded ELF segments and user stack as ring-3 accessible
- * in THIS process's own page directory (paging_mark_user patches the
- * live CR3, which is correct here since we ARE that process by the
- * time this runs), then jump to user_entry via enter_usermode.
+ * Its only job is what the old stage-9 hand-built ring-3 test did by
+ * hand (now retired): set the TSS's esp0 (belt-and-suspenders — do_switch
+ * already did this, but it's free insurance against future scheduler
+ * changes), mark the already-loaded ELF segments and user stack as
+ * ring-3 accessible in THIS process's own page directory, then jump
+ * to user_entry via enter_usermode.
  *
  * Reads user_entry/user_stack_top from current_process rather than
  * taking parameters, since process_create()'s entry signature is a
@@ -197,8 +196,8 @@ static void user_mode_trampoline(void) {
        process_create_from_elf() with PTE_USER already set, but the
        PDE-level USER bit only gets set on tables created AFTER that
        flag was known — paging_map_into() handles this correctly at
-       map time, so no separate paging_mark_user() pass is needed
-       here the way stage 9's hand-built test required it. */
+       map time, so no separate retrofit pass is needed here the way
+       the old stage-9 hand-built test required it. */
 
     enter_usermode(self->user_entry, self->user_stack_top);
     /* unreachable */

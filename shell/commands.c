@@ -3,10 +3,10 @@
 
 /*
  * The command table. Implementations live in:
- *   commands_core.c — help, clear, echo
- *   commands_mem.c  — meminfo, memtest, hexdump, heapinfo, heaptest
- *   commands_proc.c — ps, sleep, uptime, vminfo
- *   commands_user.c — synctest, usertest, elftest
+ *   commands_core.c - help, clear, echo
+ *   commands_mem.c  - meminfo, memtest, hexdump, heapinfo, heaptest
+ *   commands_proc.c - ps, sleep, uptime, vminfo
+ *   commands_user.c - synctest, elftest
  * sh_util.c holds sh_strtoul, shared by several of the above.
  */
 const command_t commands[] = {
@@ -23,7 +23,6 @@ const command_t commands[] = {
     { "uptime",   "show ticks and seconds since boot",                      cmd_uptime   },
     { "vminfo",   "show virtual memory info",                               cmd_vminfo   },
     { "synctest", "exercise int 0x80 syscall gate",                         cmd_synctest },
-    { "usertest", "spawn a process and run it at ring 3",                   cmd_usertest },
     { "elftest",  "load and run the embedded test ELF binary",              cmd_elftest  },
     { "fstest",   "exercise SYS_OPEN/READ/CLOSE against ramfs",             cmd_fstest   },
     { "ls",       "list files in ramfs",                                    cmd_ls       },
