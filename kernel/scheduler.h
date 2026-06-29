@@ -13,13 +13,13 @@ void scheduler_init(void);
  * Add a process to the ready queue.
  * Called when a process is created or unblocked.
  */
-void scheduler_enqueue(process_t* proc);
+void scheduler_enqueue(process_t *proc);
 
 /*
  * Remove a process from the ready queue.
  * Called when a process blocks or exits.
  */
-void scheduler_dequeue(process_t* proc);
+void scheduler_dequeue(process_t *proc);
 
 /*
  * Move a process from the ready queue onto the zombie list. Called by
@@ -28,7 +28,7 @@ void scheduler_dequeue(process_t* proc);
  * them), so it stays discoverable here until scheduler_tick() reaps
  * it safely from a different process's context.
  */
-void scheduler_mark_zombie(process_t* proc);
+void scheduler_mark_zombie(process_t *proc);
 
 /*
  * Called by the PIT IRQ0 handler every timer tick (~10ms).
@@ -49,13 +49,13 @@ void scheduler_yield(void);
  * Saves registers of `old`, restores registers of `new`.
  * Defined in boot/context_switch.asm.
  */
-void context_switch(process_t* old, process_t* new);
+void context_switch(process_t *old, process_t *new);
 
 /*
  * Returns the head of the round-robin ready queue (NULL if empty).
  * Exposed read-only so other subsystems (e.g. 'ps') can enumerate every
  * known process instead of only whichever one is currently running.
  */
-process_t* scheduler_queue_head(void);
+process_t *scheduler_queue_head(void);
 
 #endif

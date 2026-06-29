@@ -1,8 +1,8 @@
 #ifndef PAGING_H
 #define PAGING_H
 
+#include "pmm.h" /* for PAGE_SIZE, used by IDENTITY_MAPPED_BYTES below */
 #include <stdint.h>
-#include "pmm.h"   /* for PAGE_SIZE, used by IDENTITY_MAPPED_BYTES below */
 
 /*
  * x86 32-bit paging (non-PAE):
@@ -16,25 +16,25 @@
  */
 
 /* Page Directory Entry flags */
-#define PDE_PRESENT     (1u << 0)
-#define PDE_WRITABLE    (1u << 1)
-#define PDE_USER        (1u << 2)
+#define PDE_PRESENT (1u << 0)
+#define PDE_WRITABLE (1u << 1)
+#define PDE_USER (1u << 2)
 
 /* Page Table Entry flags */
-#define PTE_PRESENT     (1u << 0)
-#define PTE_WRITABLE    (1u << 1)
-#define PTE_USER        (1u << 2)
+#define PTE_PRESENT (1u << 0)
+#define PTE_WRITABLE (1u << 1)
+#define PTE_USER (1u << 2)
 
 /* Number of entries in a page directory / page table */
-#define PD_ENTRIES      1024
-#define PT_ENTRIES      1024
+#define PD_ENTRIES 1024
+#define PT_ENTRIES 1024
 
 /* Number of 4MB windows identity-mapped at boot (see paging_init).
  * 32MB / 4MB = 8. This must match the -m flag passed to qemu in the
  * Makefile/CI — there's no way to derive one from the other, so if
  * you raise -m, raise this too.
  */
-#define IDENTITY_PT_COUNT     8
+#define IDENTITY_PT_COUNT 8
 #define IDENTITY_MAPPED_BYTES (IDENTITY_PT_COUNT * PT_ENTRIES * PAGE_SIZE)
 
 /* A page table: 1024 4-byte PTEs */
@@ -87,6 +87,7 @@ void paging_free_pd(uint32_t pd_phys);
  * PTE_USER. The PDE gets PDE_USER too if PTE_USER is set, since the
  * CPU requires both to permit a ring-3 access.
  */
-void paging_map_into(uint32_t pd_phys, uint32_t virt, uint32_t phys, uint32_t flags);
+void paging_map_into(uint32_t pd_phys, uint32_t virt, uint32_t phys,
+                     uint32_t flags);
 
 #endif
