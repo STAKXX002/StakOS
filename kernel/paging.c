@@ -9,8 +9,9 @@ uint32_t kernel_pd[PD_ENTRIES] __attribute__((aligned(4096)));
 uint32_t kernel_pd_phys;   /* its physical address (== virtual while identity-mapped) */
 
 /* One page table per 4MB window we want to identity-map.
-   32MB / 4MB = 8 page tables.  Adjust IDENTITY_PT_COUNT if you raise -m. */
-#define IDENTITY_PT_COUNT  8
+   IDENTITY_PT_COUNT now lives in paging.h — single source of truth
+   shared with anything else that needs to know the identity-mapped
+   range (e.g. cmd_hexdump's bounds check). */
 static uint32_t identity_pts[IDENTITY_PT_COUNT][PT_ENTRIES] __attribute__((aligned(4096)));
 
 /* Assembly helper: loads CR3 and enables paging */
@@ -119,60 +120,6 @@ void paging_free_pd(uint32_t pd_phys) {
 
     /* Finally, free the top-level page directory frame */
     pmm_free_frame(pd_phys);
-}
-
-/*
- * Mark an already-mapped page as user-accessible (sets the U/S bit on
- * both the PDE and PTE). Used for stage 9 test code that lives inside
- * the kernel's identity-mapped region but needs to run at CPL=3 —
- * without this, every identity-mapped page is supervisor-only and any
- * ring-3 instruction fetch there takes a protection-violation page
- * fault (err_code bit 2 = user, bit 0 = protection, not not-present).
- *
- * This only touches kernel_pd, the address space active right now.
- * Real user processes (stage 10+) should map their pages as user-
- * accessible from the start via paging_map_into(), not retrofit them.
- */
-void paging_mark_user(uint32_t virt) {
-    uint32_t pd_idx = virt >> 22;
-    uint32_t pt_idx = (virt >> 12) & 0x3FF;
-
-    /*
-     * IMPORTANT: modify the *currently active* page directory (via
-     * live CR3), not the static kernel_pd template.
-     *
-     * Each process gets its own PD, cloned from kernel_pd at
-     * process_create() time (see paging_create_user_pd). That clone
-     * copies PDE *values* — if we later OR a bit into kernel_pd here,
-     * any process whose PD was cloned before this call still has the
-     * old PDE value and never sees the change. Since this function is
-     * always called from the process that's about to use the mapping
-     * (right before its own enter_usermode), reading CR3 here always
-     * gives the right page directory to patch.
-     */
-    uint32_t cr3;
-    __asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
-    uint32_t* pd = (uint32_t*)(uintptr_t)cr3;
-
-    if (!(pd[pd_idx] & PDE_PRESENT)) {
-        kpanic("paging_mark_user: page not mapped", "");
-        return;
-    }
-
-    pd[pd_idx] |= PDE_USER;
-
-    /* The page table itself IS shared across all per-process PD clones
-       (the PDE copy points at the same physical table), so this PTE
-       write is visible everywhere regardless of which PD we patched
-       above — but we patch via `pd` for consistency and clarity. */
-    uint32_t* pt = (uint32_t*)(uintptr_t)(pd[pd_idx] & ~0xFFF);
-    if (!(pt[pt_idx] & PTE_PRESENT)) {
-        kpanic("paging_mark_user: page not mapped", "");
-        return;
-    }
-    pt[pt_idx] |= PTE_USER;
-
-    tlb_flush(virt);
 }
 
 void paging_map_into(uint32_t pd_phys, uint32_t virt, uint32_t phys, uint32_t flags) {

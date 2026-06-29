@@ -89,10 +89,28 @@ void scheduler_mark_zombie(process_t* proc) {
 /*
  * Helper function to check if a process ID is still alive in the active scheduler 
  * queue or currently running on the CPU.
+ *
+ * NOTE: pid 0 (idle) is deliberately excluded here, even though it's
+ * structurally always present in the run queue (scheduler_init()
+ * enqueues it, and it's never dequeued/zombied). "Alive" is being used
+ * as a proxy for "will eventually call wait() to claim this zombie" —
+ * and the shell runs as pid 0 (kernel_main -> shell_run() executes as
+ * the initial idle_pcb context, see process_init), but has no SYS_WAIT
+ * path yet (stage 12c). So every shell-spawned process (run/elftest)
+ * has parent_pid == 0, and if we let the generic "is it in
+ * the queue" check answer for pid 0, it'll always say yes (idle is
+ * always there) and those zombies will never be reaped — just like
+ * before this fix existed, just for a different reason.
+ *
+ * Treating pid 0 as a non-claiming parent for now means shell-spawned
+ * zombies get swept immediately, same as pre-orphan-protection
+ * behavior. Once the shell can issue a real wait() for foreground
+ * children, remove this and let pid 0 go through the normal path —
+ * at that point it legitimately becomes a parent that can claim.
  */
 static int is_pid_alive(uint32_t pid) {
-    if (pid == 0) return 1; /* The idle/shell task is always treated as alive */
-    
+    if (pid == 0) return 0; /* idle/shell can't call wait() yet — treat as non-claiming */
+
     process_t* cur = process_current();
     if (cur && cur->pid == pid) return 1;
 
