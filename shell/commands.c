@@ -27,5 +27,6 @@ const command_t commands[] = {
     {"fstest", "exercise SYS_OPEN/READ/CLOSE against ramfs", cmd_fstest},
     {"ls", "list files in ramfs", cmd_ls},
     {"run", "run <filename> - load and execute an ELF from ramfs", cmd_run},
+    {"shutdown", "shut down the system", cmd_shutdown},
     {NULL, NULL, NULL} /* sentinel */
 };

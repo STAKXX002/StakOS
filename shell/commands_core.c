@@ -1,3 +1,4 @@
+#include "../kernel/io.h"
 #include "../kernel/vga.h"
 #include "commands.h"
 #include <stdint.h>
@@ -51,4 +52,32 @@ void cmd_echo(int argc, char **argv) {
       kprint(" ");
   }
   kprint("\n");
+}
+
+/* ---- shutdown ---- */
+
+void cmd_shutdown(int argc, char **argv) {
+  (void)argc; // Fixes unused parameter warning
+  (void)argv; // Fixes unused parameter warning
+
+  vga_set_color(VGA_COLOR_LIGHT_RED);
+  kprint("Shutting down StakOS...\n");
+
+  // QEMU ACPI Shutdown
+  outw(0x604, 0x2000);
+
+  // VirtualBox / Older QEMU ACPI Shutdown
+  outw(0x4004, 0x3400);
+
+  // Bochs / Old QEMU Shutdown
+  outw(0xB004, 0x2000);
+
+  // Fallback safe halt
+  vga_set_color(VGA_COLOR_LIGHT_GREY);
+  kprint("Shutdown failed. It is now safe to turn off your computer.\n");
+
+  __asm__ volatile("cli");
+  for (;;) {
+    __asm__ volatile("hlt");
+  }
 }
