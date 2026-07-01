@@ -1,6 +1,6 @@
 # StakOS
 
-A 32-bit x86 kernel written from scratch in C and x86 assembly - no libc, no existing kernel code, built up one subsystem at a time. The goal is to understand operating systems from the hardware up: how a CPU boots, how interrupts actually work, how memory is managed without an MMU doing favors for you, and how a scheduler decides who runs next.
+A 32-bit x86 kernel written from scratch in C and x86 assembly . The goal is to understand operating systems from the hardware up: how a CPU boots, how interrupts actually work, how memory is managed without an MMU doing favors for you, and how a scheduler decides who runs next.
 
 Development follows a staged progression, each stage adding one subsystem on top of a working version of the last.
 
