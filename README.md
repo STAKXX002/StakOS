@@ -51,6 +51,7 @@ An interactive command-line shell with a readline loop, argv-style parsing, and 
 | `fstest` | exercise SYS_OPEN/READ/CLOSE against ramfs |
 | `ls` | list files in ramfs |
 | `run` | run a program from ramfs |
+| `shutdown` | shut down the system |
 
 ## Build
 
