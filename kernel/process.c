@@ -268,7 +268,7 @@ static void user_mode_trampoline(void) {
 
 #define USER_STACK_PAGES 4 /* 16 KB user stack */
 #define USER_STACK_BASE                                                        \
-  0x500000 /* arbitrary - well above where any                               \
+  0x500000 /* arbitrary - well above where any                                 \
                PT_LOAD segment in our test binary                              \
                lives (0x400000), no collision */
 

@@ -3,10 +3,11 @@
 
 #include <stdint.h>
 
-#define STACK_SIZE 8192       /* 8 KB per-process kernel stack */
-#define MAX_PROCESSES 16      /* max concurrent processes for now */
-#define MAX_FDS_PER_PROCESS 8 /* small and fixed for now - no dynamic growth \
-                               */
+#define STACK_SIZE 8192  /* 8 KB per-process kernel stack */
+#define MAX_PROCESSES 16 /* max concurrent processes for now */
+#define MAX_FDS_PER_PROCESS                                                    \
+  8 /* small and fixed for now - no dynamic growth                             \
+     */
 
 typedef enum {
   PROCESS_READY,   /* in run queue, wants CPU                      */
