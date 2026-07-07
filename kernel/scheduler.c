@@ -13,7 +13,7 @@ static process_t *queue_tail = NULL;
 static uint32_t queue_size = 0;
 
 /*
- * Zombie list — processes that called process_exit() but whose
+ * Zombie list - processes that called process_exit() but whose
  * resources (PCB, kernel stack frames, page directory) can't be
  * freed yet because they were still running on/using them at the
  * moment they exited. scheduler_tick() reaps this list from a
@@ -92,42 +92,47 @@ void scheduler_mark_zombie(process_t *proc) {
 /* ---- scheduler_reap_zombies ---- */
 
 /*
- * Helper function to check if a process ID is still alive in the active
- * scheduler queue or currently running on the CPU.
+ * Helper function to check if a process ID still exists as a live
+ * entity (READY, RUNNING, or BLOCKED) that could eventually call
+ * wait() to claim a zombie child.
  *
- * NOTE: pid 0 (idle) is deliberately excluded here, even though it's
- * structurally always present in the run queue (scheduler_init()
- * enqueues it, and it's never dequeued/zombied). "Alive" is being used
- * as a proxy for "will eventually call wait() to claim this zombie" —
- * and the shell runs as pid 0 (kernel_main -> shell_run() executes as
- * the initial idle_pcb context, see process_init), but has no SYS_WAIT
- * path yet (stage 12c). So every shell-spawned process (run/elftest)
- * has parent_pid == 0, and if we let the generic "is it in
- * the queue" check answer for pid 0, it'll always say yes (idle is
- * always there) and those zombies will never be reaped — just like
- * before this fix existed, just for a different reason.
+ * Looks the pid up in process_table via process_lookup() rather than
+ * walking the ready queue. This matters because "in the ready queue"
+ * is NOT the same thing as "alive" - a process blocked indefinitely
+ * on an event (wait() in 12b, a pipe read/write in 12c) will be
+ * scheduler_dequeue()'d out of the ready queue entirely while still
+ * very much alive, and a queue-traversal check would wrongly report
+ * it as dead, causing scheduler_reap_zombies() to free a zombie's
+ * PCB/stack/page-directory out from under a parent that's about to
+ * wait() for it.
+ *
+ * NOTE: pid 0 (idle) is deliberately excluded here even though
+ * process_lookup(0) will find it (it's registered in process_init()).
+ * "Alive" is being used as a proxy for "will eventually call wait()
+ * to claim this zombie" - and the shell runs as pid 0 (kernel_main ->
+ * shell_run() executes as the initial idle_pcb context, see
+ * process_init), but has no SYS_WAIT path yet (stage 12c). So every
+ * shell-spawned process (run/elftest) has parent_pid == 0, and if we
+ * let the lookup answer for pid 0, it'll always say yes (idle always
+ * exists) and those zombies will never be reaped.
  *
  * Treating pid 0 as a non-claiming parent for now means shell-spawned
  * zombies get swept immediately, same as pre-orphan-protection
  * behavior. Once the shell can issue a real wait() for foreground
- * children, remove this and let pid 0 go through the normal path —
+ * children, remove this and let pid 0 go through the normal path -
  * at that point it legitimately becomes a parent that can claim.
  */
 static int is_pid_alive(uint32_t pid) {
   if (pid == 0)
-    return 0; /* idle/shell can't call wait() yet — treat as non-claiming */
+    return 0; /* idle/shell can't call wait() yet - treat as non-claiming.
+                 Remove this special case once pid 0 gets a real SYS_WAIT
+                 path (stage 12c) and can legitimately claim zombies. */
 
-  process_t *cur = process_current();
-  if (cur && cur->pid == pid)
-    return 1;
+  process_t *p = process_lookup(pid);
+  if (!p)
+    return 0; /* never existed, or already freed */
 
-  process_t *p = scheduler_queue_head();
-  while (p) {
-    if (p->pid == pid)
-      return 1;
-    p = p->next;
-  }
-  return 0;
+  return p->state != PROCESS_ZOMBIE && p->state != PROCESS_DEAD;
 }
 
 /*
@@ -137,7 +142,7 @@ static int is_pid_alive(uint32_t pid) {
  * later.
  *
  * Called from scheduler_tick(), which always runs in the interrupt context of
- * whichever process the timer suspended—never as the zombie itself. This
+ * whichever process the timer suspended-never as the zombie itself. This
  * guarantees that freeing its kernel stack and page directory is completely
  * safe.
  */
@@ -178,7 +183,7 @@ void scheduler_init(void) {
    * idle PCB directly, bypassing the queue entirely. If we don't enqueue
    * it here, idle sits outside the round-robin set: the instant anything
    * else is created and idle's first (1-tick) quantum expires, idle is
-   * marked READY but can never be picked again — the system gets stuck
+   * marked READY but can never be picked again - the system gets stuck
    * running whatever just preempted it, forever.
    */
   process_t *idle = process_current();
@@ -258,7 +263,7 @@ static void do_switch(process_t *next) {
   /*
    * Point the TSS at next's kernel stack top. The CPU reads this
    * (esp0/ss0) automatically on any ring 3 -> ring 0 transition
-   * (interrupt, exception, or int 0x80) — it has nothing to do with
+   * (interrupt, exception, or int 0x80) - it has nothing to do with
    * our own software context_switch below, but it MUST be correct
    * before any process runs at CPL=3, or the first interrupt while
    * that process is running will load a stale or zero stack pointer.
@@ -274,7 +279,7 @@ static void do_switch(process_t *next) {
 
 /*
  * Called by PIT IRQ0 every timer tick.
- * 1. Decrement sleep_ticks for any sleeping process — wake it if done.
+ * 1. Decrement sleep_ticks for any sleeping process - wake it if done.
  * 2. Decrement current process's ticks_remaining.
  * 3. If quantum expired, switch to next READY process.
  */
@@ -283,7 +288,7 @@ void scheduler_tick(void) {
   if (!cur)
     return;
 
-  /* Free any processes that exited since the last tick. Safe here —
+  /* Free any processes that exited since the last tick. Safe here -
      we're never running as the zombie itself at this point. */
   scheduler_reap_zombies();
 

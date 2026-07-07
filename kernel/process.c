@@ -9,12 +9,12 @@
 #include "vga.h"
 #include <stddef.h>
 
-/* Defined in boot/boot.asm — top of the 16KB boot-time kernel stack.
+/* Defined in boot/boot.asm - top of the 16KB boot-time kernel stack.
    Used as idle's kernel_stack_top so the TSS esp0 is always valid,
    even before idle has ever been switched away from. */
 extern uint8_t stack_top;
 
-/* Simple string copy — no libc */
+/* Simple string copy - no libc */
 static void kstrncpy(char *dst, const char *src, uint32_t n) {
   uint32_t i = 0;
   while (i < n - 1 && src[i]) {
@@ -30,8 +30,46 @@ static uint32_t next_pid = 0;
 /* Currently running process */
 static process_t *current_process = NULL;
 
-/* The idle process — runs when nothing else is READY */
+/* The idle process - runs when nothing else is READY */
 static process_t idle_pcb;
+
+/*
+ * Master table of every live process, independent of the scheduler's
+ * ready queue. This exists because "in the ready queue" is NOT the
+ * same thing as "alive" - a process blocked on wait()/a pipe/etc.
+ * may be dequeued from the ready queue entirely while still very
+ * much alive. NULL slot = empty.
+ */
+static process_t *proc_table[MAX_PROCESSES];
+
+/* Find the first free slot and store proc. Returns 0 on success, -1 if full. */
+static int proc_table_add(process_t *proc) {
+  for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+    if (!proc_table[i]) {
+      proc_table[i] = proc;
+      return 0;
+    }
+  }
+  return -1;
+}
+
+/* Remove proc from the table (by pointer match). Safe no-op if not found. */
+static void proc_table_remove(process_t *proc) {
+  for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+    if (proc_table[i] == proc) {
+      proc_table[i] = NULL;
+      return;
+    }
+  }
+}
+
+process_t *process_lookup(uint32_t pid) {
+  for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+    if (proc_table[i] && proc_table[i]->pid == pid)
+      return proc_table[i];
+  }
+  return NULL;
+}
 
 /* ---- idle task ---- */
 
@@ -47,7 +85,7 @@ static void __attribute__((unused)) idle_task(void) {
 void process_init(void) {
   /*
    * Set up the idle process (PID 0).
-   * It uses idle_pcb which is statically allocated — no kmalloc needed.
+   * It uses idle_pcb which is statically allocated - no kmalloc needed.
    * This is important because process_init() runs before the heap is
    * fully exercised.
    */
@@ -68,6 +106,8 @@ void process_init(void) {
   current_process = &idle_pcb;
   idle_pcb.cr3 =
       kernel_pd_phys; /* idle uses the original kernel address space */
+
+  proc_table_add(&idle_pcb);
 
   vga_set_color(VGA_COLOR_LIGHT_GREEN);
   kprint("[OK] Process subsystem initialized (idle PID=0)\n");
@@ -127,7 +167,7 @@ process_t *process_create(const char *name, void (*entry)(void),
 
   /* Allocate 2 contiguous PMM frames (8 KB) for the kernel stack.
      pmm_alloc_frame returns one frame at a time, so we call it twice.
-     They won't be physically contiguous, but that's fine — we only
+     They won't be physically contiguous, but that's fine - we only
      use the top frame for the initial stack pointer, and the stack
      grows down within it (8 KB is two frames, so we need both). */
   uint32_t stack_lo = pmm_alloc_frame();
@@ -155,12 +195,12 @@ process_t *process_create(const char *name, void (*entry)(void),
 
   /*
    * Set up initial stack frame so context_switch can restore it.
-   * We build the stack manually here — this is what the process will
+   * We build the stack manually here - this is what the process will
    * "wake up to" the very first time it's scheduled.
    */
   uint32_t *stack = (uint32_t *)proc->kernel_stack_top;
   *(--stack) = (uint32_t)process_exit; /* return address guard */
-  *(--stack) = (uint32_t)entry;        /* eip — where execution starts */
+  *(--stack) = (uint32_t)entry;        /* eip - where execution starts */
   *(--stack) = 0x00000202;             /* eflags: IF=1 (interrupts on) */
   *(--stack) = 0;                      /* eax */
   *(--stack) = 0;                      /* ecx */
@@ -170,10 +210,21 @@ process_t *process_create(const char *name, void (*entry)(void),
   *(--stack) = 0;                      /* esi */
   *(--stack) = 0;                      /* edi */
 
-  /* esp points to the edi slot — exactly where context_switch expects it */
+  /* esp points to the edi slot - exactly where context_switch expects it */
   proc->esp = (uint32_t)stack;
 
   scheduler_enqueue(proc);
+
+  if (proc_table_add(proc) != 0) {
+    /* Table full - MAX_PROCESSES concurrent processes already exist.
+       Tear down everything we just built, same as the OOM paths above. */
+    scheduler_dequeue(proc);
+    pmm_free_frame(proc->stack_frame_lo);
+    pmm_free_frame(proc->stack_frame_hi);
+    paging_free_pd(proc->cr3);
+    kfree(proc);
+    return NULL;
+  }
 
   return proc;
 }
@@ -183,10 +234,10 @@ process_t *process_create(const char *name, void (*entry)(void),
 /*
  * Entry function for every process started via process_create_from_elf().
  * Runs once, in kernel mode, the first time the scheduler switches to
- * this process — same as any other process_create() entry function.
+ * this process - same as any other process_create() entry function.
  *
  * Its only job is what the old stage-9 hand-built ring-3 test did by
- * hand (now retired): set the TSS's esp0 (belt-and-suspenders — do_switch
+ * hand (now retired): set the TSS's esp0 (belt-and-suspenders - do_switch
  * already did this, but it's free insurance against future scheduler
  * changes), mark the already-loaded ELF segments and user stack as
  * ring-3 accessible in THIS process's own page directory, then jump
@@ -194,7 +245,7 @@ process_t *process_create(const char *name, void (*entry)(void),
  *
  * Reads user_entry/user_stack_top from current_process rather than
  * taking parameters, since process_create()'s entry signature is a
- * fixed void(*)(void) — there's no other way to pass this data through
+ * fixed void(*)(void) - there's no other way to pass this data through
  * the existing context-switch machinery without changing that ABI.
  */
 static void user_mode_trampoline(void) {
@@ -205,7 +256,7 @@ static void user_mode_trampoline(void) {
   /* The ELF's segments and the user stack were mapped by
      process_create_from_elf() with PTE_USER already set, but the
      PDE-level USER bit only gets set on tables created AFTER that
-     flag was known — paging_map_into() handles this correctly at
+     flag was known - paging_map_into() handles this correctly at
      map time, so no separate retrofit pass is needed here the way
      the old stage-9 hand-built test required it. */
 
@@ -217,7 +268,7 @@ static void user_mode_trampoline(void) {
 
 #define USER_STACK_PAGES 4 /* 16 KB user stack */
 #define USER_STACK_BASE                                                        \
-  0x500000 /* arbitrary — well above where any                               \
+  0x500000 /* arbitrary - well above where any                               \
                PT_LOAD segment in our test binary                              \
                lives (0x400000), no collision */
 
@@ -233,7 +284,7 @@ process_t *process_create_from_elf(const char *name, const uint8_t *elf_data,
 
   if (!elf32_load(elf_data, proc->cr3)) {
     /* Resources allocated by process_create so far (PCB, kernel
-       stack, page directory) are still valid — let the normal
+       stack, page directory) are still valid - let the normal
        exit/reap path handle them rather than duplicating cleanup
        here. Marking ZOMBIE directly (not via process_exit, since
        we're not running AS this process) and leaving it for the
@@ -243,7 +294,7 @@ process_t *process_create_from_elf(const char *name, const uint8_t *elf_data,
     return NULL;
   }
 
-  /* Map a user stack right after the segments — separate frames,
+  /* Map a user stack right after the segments - separate frames,
      separate mapping call, same target page directory. */
   uint32_t stack_top = USER_STACK_BASE;
   for (uint32_t i = 0; i < USER_STACK_PAGES; i++) {
@@ -271,7 +322,7 @@ void process_exit(int32_t exit_code) {
   current_process->exit_code = exit_code;
   current_process->state = PROCESS_ZOMBIE;
 
-  /* Move to the zombie list instead of just dequeuing — we can't
+  /* Move to the zombie list instead of just dequeuing - we can't
      free our own PCB/stack/page directory while still running on
      them, so scheduler_tick() reaps us later from a safe context. */
   scheduler_mark_zombie(current_process);
@@ -292,6 +343,8 @@ void process_exit(int32_t exit_code) {
 void process_free(process_t *proc) {
   if (!proc)
     return;
+
+  proc_table_remove(proc);
 
   pmm_free_frame(proc->stack_frame_lo);
   pmm_free_frame(proc->stack_frame_hi);
