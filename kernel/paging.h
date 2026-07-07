@@ -31,7 +31,7 @@
 
 /* Number of 4MB windows identity-mapped at boot (see paging_init).
  * 32MB / 4MB = 8. This must match the -m flag passed to qemu in the
- * Makefile/CI — there's no way to derive one from the other, so if
+ * Makefile/CI - there's no way to derive one from the other, so if
  * you raise -m, raise this too.
  */
 #define IDENTITY_PT_COUNT 8
@@ -70,13 +70,13 @@ uint32_t paging_create_user_pd(void);
 /*
  * Free a per-process page directory previously created by
  * paging_create_user_pd(). Does NOT free any user-space page tables
- * or frames — that's the job of the VM region tracker (stage 7c+).
+ * or frames - that's the job of the VM region tracker (stage 7c+).
  */
 void paging_free_pd(uint32_t pd_phys);
 
 /*
  * Maps a virtual page to a physical frame inside an ARBITRARY page
- * directory — not necessarily the one currently loaded in CR3.
+ * directory - not necessarily the one currently loaded in CR3.
  *
  * This is what the ELF loader needs: it builds a new process's
  * address space while the caller (e.g. the shell) is still running
@@ -89,5 +89,15 @@ void paging_free_pd(uint32_t pd_phys);
  */
 void paging_map_into(uint32_t pd_phys, uint32_t virt, uint32_t phys,
                      uint32_t flags);
+
+/*
+ * Clone a process's user-space mappings into a brand-new page directory.
+ * Copies every present user page (PDEs from IDENTITY_PT_COUNT..1023) into
+ * freshly allocated physical frames - a full copy, not copy-on-write.
+ * Kernel half is set up identically to paging_create_user_pd().
+ * Returns the new pd_phys, or 0 on OOM (partial allocation is cleaned up
+ * internally via paging_free_pd before returning).
+ */
+uint32_t paging_clone_user_space(uint32_t parent_pd_phys);
 
 #endif

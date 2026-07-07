@@ -3,14 +3,14 @@
 #include "vga.h"
 #include <stddef.h>
 
-/* Kernel page directory — one static, 4KB-aligned array.
+/* Kernel page directory - one static, 4KB-aligned array.
    All per-process PDs are cloned from this. */
 uint32_t kernel_pd[PD_ENTRIES] __attribute__((aligned(4096)));
 uint32_t kernel_pd_phys; /* its physical address (== virtual while
                             identity-mapped) */
 
 /* One page table per 4MB window we want to identity-map.
-   IDENTITY_PT_COUNT now lives in paging.h — single source of truth
+   IDENTITY_PT_COUNT now lives in paging.h - single source of truth
    shared with anything else that needs to know the identity-mapped
    range (e.g. cmd_hexdump's bounds check). */
 static uint32_t identity_pts[IDENTITY_PT_COUNT][PT_ENTRIES]
@@ -93,7 +93,7 @@ uint32_t paging_create_user_pd(void) {
   uint32_t *pd = (uint32_t *)(uintptr_t)pd_phys;
 
   /* Copy kernel mappings (identity-mapped region, entries
-     0..IDENTITY_PT_COUNT-1). User entries (IDENTITY_PT_COUNT .. 1023) stay 0 —
+     0..IDENTITY_PT_COUNT-1). User entries (IDENTITY_PT_COUNT .. 1023) stay 0 -
      not present. */
   for (uint32_t i = 0; i < PD_ENTRIES; i++)
     pd[i] = (i < IDENTITY_PT_COUNT) ? kernel_pd[i] : 0;
@@ -165,4 +165,46 @@ void paging_map_into(uint32_t pd_phys, uint32_t virt, uint32_t phys,
   pt[pt_idx] = (phys & ~0xFFF) | flags;
 
   tlb_flush(virt);
+}
+
+uint32_t paging_clone_user_space(uint32_t parent_pd_phys) {
+  uint32_t child_pd_phys = paging_create_user_pd();
+  if (!child_pd_phys)
+    return 0;
+
+  uint32_t *parent_pd = (uint32_t *)(uintptr_t)parent_pd_phys;
+
+  for (uint32_t pd_idx = IDENTITY_PT_COUNT; pd_idx < PD_ENTRIES; pd_idx++) {
+    if (!(parent_pd[pd_idx] & PDE_PRESENT))
+      continue;
+
+    uint32_t parent_pt_phys = parent_pd[pd_idx] & ~0xFFF;
+    uint32_t *parent_pt = (uint32_t *)(uintptr_t)parent_pt_phys;
+
+    for (uint32_t pt_idx = 0; pt_idx < PT_ENTRIES; pt_idx++) {
+      if (!(parent_pt[pt_idx] & PTE_PRESENT))
+        continue;
+
+      uint32_t parent_frame = parent_pt[pt_idx] & ~0xFFF;
+      uint32_t flags = parent_pt[pt_idx] & 0xFFF; /* preserve PRESENT/W/USER */
+
+      uint32_t child_frame = pmm_alloc_frame();
+      if (!child_frame) {
+        paging_free_pd(child_pd_phys);
+        return 0;
+      }
+
+      /* Direct pointer copy - same convention as elf32_load: every
+         frame the PMM hands out lives inside our 32MB identity window. */
+      uint8_t *src = (uint8_t *)(uintptr_t)parent_frame;
+      uint8_t *dst = (uint8_t *)(uintptr_t)child_frame;
+      for (uint32_t b = 0; b < PAGE_SIZE; b++)
+        dst[b] = src[b];
+
+      uint32_t virt = (pd_idx << 22) | (pt_idx << 12);
+      paging_map_into(child_pd_phys, virt, child_frame, flags);
+    }
+  }
+
+  return child_pd_phys;
 }

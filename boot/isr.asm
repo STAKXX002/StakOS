@@ -146,7 +146,7 @@ syscall_common_stub:
     push esp
     call syscall_handler
     add esp, 4
-    ; eax now holds the syscall's return value — must survive until popa
+    ; eax now holds the syscall's return value - must survive until popa
 
     pop ebx               ; restore saved ds into ebx, NOT eax (eax holds retval)
     mov ds, bx
@@ -157,6 +157,29 @@ syscall_common_stub:
     ; Overwrite the pusha'd eax slot on the stack with the return value,
     ; so popa loads it into eax for the calling process to see after iret.
     mov [esp + 28], eax
+
+    popa
+    add esp, 8
+    iret
+
+; fork_trampoline
+;
+; Landing pad for a freshly-forked child's FIRST scheduling. context_switch's
+; `ret` lands here (its eip came from the fake call-frame process_fork()
+; built). At this exact moment, esp points at a hand-built replica of a
+; syscall trap frame (ds, pusha regs with eax forced to 0, int_no, err_code,
+; eip, cs, eflags, esp_user, ss_user) - see process_fork() in process.c.
+;
+; This is byte-for-byte the same stack shape syscall_common_stub leaves
+; behind right before its own epilogue, so we just run that epilogue here
+; to drop straight into ring 3 at the parent's exact post-int-0x80 address.
+global fork_trampoline
+fork_trampoline:
+    pop eax
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
 
     popa
     add esp, 8
