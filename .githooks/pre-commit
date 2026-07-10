@@ -1,0 +1,11 @@
+#!/bin/sh
+
+echo "Formatting source files..."
+
+find kernel shell mm drivers userland include \
+    \( -name "*.c" -o -name "*.h" \) \
+    -exec clang-format -i {} +
+
+git add kernel shell mm drivers userland include
+
+echo "Done."
