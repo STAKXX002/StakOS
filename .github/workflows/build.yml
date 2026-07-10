@@ -50,8 +50,6 @@ jobs:
 
     - name: Verify cross-compiler
       run: |
-        # Catches a corrupted/stale cache restore early with a clear
-        # error, instead of a confusing make/linker failure downstream.
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
         i686-elf-gcc --version
         i686-elf-gcc -print-multi-os-directory || true
@@ -67,9 +65,6 @@ jobs:
 
     - name: Boot smoke test in QEMU
       run: |
-        # `|| true` lets a QEMU crash/timeout fall through to the log
-        # dump below instead of failing the step before we can see why.
-        # The actual pass/fail signal is the grep at the end.
         timeout --signal=KILL 30 qemu-system-i386 \
           -m 32M \
           -display none \
@@ -79,6 +74,7 @@ jobs:
           -cdrom build/stakos.iso || true
 
         echo "----- QEMU debug console output -----"
+
         if [ -f debug.log ]; then
           cat debug.log
         else
