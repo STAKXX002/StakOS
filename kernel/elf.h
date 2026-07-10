@@ -16,38 +16,38 @@
 #define PF_R (1u << 2) /* readable   */
 
 typedef struct __attribute__((packed)) {
-  uint32_t magic;   /* must equal ELF_MAGIC */
-  uint8_t ei_class; /* 1 = 32-bit */
-  uint8_t ei_data;  /* 1 = little-endian */
-  uint8_t version;
-  uint8_t osabi;
-  uint8_t abiversion;
-  uint8_t pad[7];
-  uint16_t type;    /* 2 = executable */
-  uint16_t machine; /* 3 = x86 */
-  uint32_t version2;
-  uint32_t entry; /* virtual address of the entry point */
-  uint32_t phoff; /* file offset of the program header table */
-  uint32_t shoff;
-  uint32_t flags;
-  uint16_t ehsize;
-  uint16_t phentsize; /* size of one program header entry */
-  uint16_t phnum;     /* number of program header entries */
-  uint16_t shentsize;
-  uint16_t shnum;
-  uint16_t shstrndx;
+    uint32_t magic;   /* must equal ELF_MAGIC */
+    uint8_t ei_class; /* 1 = 32-bit */
+    uint8_t ei_data;  /* 1 = little-endian */
+    uint8_t version;
+    uint8_t osabi;
+    uint8_t abiversion;
+    uint8_t pad[7];
+    uint16_t type;    /* 2 = executable */
+    uint16_t machine; /* 3 = x86 */
+    uint32_t version2;
+    uint32_t entry; /* virtual address of the entry point */
+    uint32_t phoff; /* file offset of the program header table */
+    uint32_t shoff;
+    uint32_t flags;
+    uint16_t ehsize;
+    uint16_t phentsize; /* size of one program header entry */
+    uint16_t phnum;     /* number of program header entries */
+    uint16_t shentsize;
+    uint16_t shnum;
+    uint16_t shstrndx;
 } elf32_header_t;
 
 typedef struct __attribute__((packed)) {
-  uint32_t type;   /* PT_LOAD, etc. */
-  uint32_t offset; /* offset in the file */
-  uint32_t vaddr;  /* virtual address to load at */
-  uint32_t paddr;  /* unused by us — ELF leftover field */
-  uint32_t filesz; /* bytes to copy from the file */
-  uint32_t memsz;  /* bytes to reserve in memory (>= filesz; the
-                       difference is zero-filled, e.g. for .bss) */
-  uint32_t flags;  /* PF_R / PF_W / PF_X */
-  uint32_t align;
+    uint32_t type;   /* PT_LOAD, etc. */
+    uint32_t offset; /* offset in the file */
+    uint32_t vaddr;  /* virtual address to load at */
+    uint32_t paddr;  /* unused by us — ELF leftover field */
+    uint32_t filesz; /* bytes to copy from the file */
+    uint32_t memsz;  /* bytes to reserve in memory (>= filesz; the
+                         difference is zero-filled, e.g. for .bss) */
+    uint32_t flags;  /* PF_R / PF_W / PF_X */
+    uint32_t align;
 } elf32_phdr_t;
 
 /*

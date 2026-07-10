@@ -14,10 +14,10 @@
  * table entry; there's no refcounting yet.
  */
 typedef struct {
-  char name[RAMFS_MAX_NAME_LEN];
-  const uint8_t *data;
-  uint32_t size;
-  int in_use;
+    char name[RAMFS_MAX_NAME_LEN];
+    const uint8_t *data;
+    uint32_t size;
+    int in_use;
 } ramfs_file_t;
 
 /* Resets the file table to empty. Call once during boot. */

@@ -87,8 +87,7 @@ void paging_free_pd(uint32_t pd_phys);
  * PTE_USER. The PDE gets PDE_USER too if PTE_USER is set, since the
  * CPU requires both to permit a ring-3 access.
  */
-void paging_map_into(uint32_t pd_phys, uint32_t virt, uint32_t phys,
-                     uint32_t flags);
+void paging_map_into(uint32_t pd_phys, uint32_t virt, uint32_t phys, uint32_t flags);
 
 /*
  * Clone a process's user-space mappings into a brand-new page directory.

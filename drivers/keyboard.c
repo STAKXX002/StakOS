@@ -43,48 +43,46 @@ static uint8_t kb_tail = 0; /* read position  */
 static uint8_t shift = 0;   /* shift state    */
 
 static void kb_buf_push(char c) {
-  uint8_t next = (kb_head + 1) % KEYBOARD_BUF_SIZE;
-  if (next != kb_tail) { /* drop if full */
-    kb_buf[kb_head] = c;
-    kb_head = next;
-  }
+    uint8_t next = (kb_head + 1) % KEYBOARD_BUF_SIZE;
+    if (next != kb_tail) { /* drop if full */
+        kb_buf[kb_head] = c;
+        kb_head = next;
+    }
 }
 
 void keyboard_handler(registers_t *r) {
-  (void)r;
-  uint8_t sc = inb(KEYBOARD_DATA_PORT);
+    (void)r;
+    uint8_t sc = inb(KEYBOARD_DATA_PORT);
 
-  /* Key release - bit 7 set */
-  if (sc & 0x80) {
-    uint8_t released = sc & 0x7F;
-    if (released == 0x2A || released == 0x36)
-      shift = 0;
-    return;
-  }
+    /* Key release - bit 7 set */
+    if (sc & 0x80) {
+        uint8_t released = sc & 0x7F;
+        if (released == 0x2A || released == 0x36)
+            shift = 0;
+        return;
+    }
 
-  /* Shift pressed */
-  if (sc == 0x2A || sc == 0x36) {
-    shift = 1;
-    return;
-  }
+    /* Shift pressed */
+    if (sc == 0x2A || sc == 0x36) {
+        shift = 1;
+        return;
+    }
 
-  /* Translate scancode to ASCII */
-  if (sc < sizeof(sc_ascii)) {
-    char c = shift ? sc_ascii_shift[sc] : sc_ascii[sc];
-    if (c)
-      kb_buf_push(c);
-  }
+    /* Translate scancode to ASCII */
+    if (sc < sizeof(sc_ascii)) {
+        char c = shift ? sc_ascii_shift[sc] : sc_ascii[sc];
+        if (c)
+            kb_buf_push(c);
+    }
 }
 
 /* Non-blocking read - returns 0 if buffer empty */
 char keyboard_getchar(void) {
-  if (kb_head == kb_tail)
-    return 0;
-  char c = kb_buf[kb_tail];
-  kb_tail = (kb_tail + 1) % KEYBOARD_BUF_SIZE;
-  return c;
+    if (kb_head == kb_tail)
+        return 0;
+    char c = kb_buf[kb_tail];
+    kb_tail = (kb_tail + 1) % KEYBOARD_BUF_SIZE;
+    return c;
 }
 
-void keyboard_init(void) {
-  /* Nothing to configure for basic PS/2 - IRQ1 handler does the work */
-}
+void keyboard_init(void) { /* Nothing to configure for basic PS/2 - IRQ1 handler does the work */ }

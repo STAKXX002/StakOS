@@ -24,69 +24,69 @@ static process_t *zombie_head = NULL;
 /* ---- queue operations ---- */
 
 void scheduler_enqueue(process_t *proc) {
-  if (!proc)
-    return;
+    if (!proc)
+        return;
 
-  uint32_t flags;
-  __asm__ volatile("pushf; pop %0; cli" : "=r"(flags));
+    uint32_t flags;
+    __asm__ volatile("pushf; pop %0; cli" : "=r"(flags));
 
-  proc->state = PROCESS_READY;
-  proc->next = NULL;
-  if (!queue_head) {
-    queue_head = proc;
-    queue_tail = proc;
-  } else {
-    queue_tail->next = proc;
-    queue_tail = proc;
-  }
-  queue_size++;
+    proc->state = PROCESS_READY;
+    proc->next = NULL;
+    if (!queue_head) {
+        queue_head = proc;
+        queue_tail = proc;
+    } else {
+        queue_tail->next = proc;
+        queue_tail = proc;
+    }
+    queue_size++;
 
-  __asm__ volatile("push %0; popf" : : "r"(flags));
+    __asm__ volatile("push %0; popf" : : "r"(flags));
 }
 
 void scheduler_dequeue(process_t *proc) {
-  if (!proc || !queue_head)
-    return;
+    if (!proc || !queue_head)
+        return;
 
-  uint32_t flags;
-  __asm__ volatile("pushf; pop %0; cli" : "=r"(flags));
+    uint32_t flags;
+    __asm__ volatile("pushf; pop %0; cli" : "=r"(flags));
 
-  process_t *prev = NULL;
-  process_t *cur = queue_head;
-  while (cur) {
-    if (cur == proc) {
-      if (prev)
-        prev->next = cur->next;
-      else
-        queue_head = cur->next;
-      if (cur == queue_tail)
-        queue_tail = prev;
-      cur->next = NULL;
-      queue_size--;
-      break;
+    process_t *prev = NULL;
+    process_t *cur = queue_head;
+    while (cur) {
+        if (cur == proc) {
+            if (prev)
+                prev->next = cur->next;
+            else
+                queue_head = cur->next;
+            if (cur == queue_tail)
+                queue_tail = prev;
+            cur->next = NULL;
+            queue_size--;
+            break;
+        }
+        prev = cur;
+        cur = cur->next;
     }
-    prev = cur;
-    cur = cur->next;
-  }
 
-  __asm__ volatile("push %0; popf" : : "r"(flags));
+    __asm__ volatile("push %0; popf" : : "r"(flags));
 }
 
 void scheduler_mark_zombie(process_t *proc) {
-  if (!proc)
-    return;
+    if (!proc)
+        return;
 
-  /* Take it out of the run queue first (same logic as dequeue),
-     then push it onto the zombie list instead of discarding it. */
-  scheduler_dequeue(proc);
+    /* Take it out of the run queue first (same logic as dequeue),
+       then push it onto the zombie list instead of discarding it. */
+    scheduler_dequeue(proc);
 
-  uint32_t flags;
-  __asm__ volatile("pushf; pop %0; cli" : "=r"(flags));
+    uint32_t flags;
+    __asm__ volatile("pushf; pop %0; cli" : "=r"(flags));
 
-  proc->next = zombie_head;
-  zombie_head = proc;
+    proc->next = zombie_head;
+    zombie_head = proc;
 
-  __asm__ volatile("push %0; popf" : : "r"(flags));
+    __asm__ volatile("push %0; popf" : : "r"(flags));
 }
 
 /* ---- scheduler_reap_zombies ---- */
@@ -123,16 +123,16 @@ void scheduler_mark_zombie(process_t *proc) {
  * at that point it legitimately becomes a parent that can claim.
  */
 static int is_pid_alive(uint32_t pid) {
-  if (pid == 0)
-    return 0; /* idle/shell can't call wait() yet - treat as non-claiming.
-                 Remove this special case once pid 0 gets a real SYS_WAIT
-                 path (stage 12c) and can legitimately claim zombies. */
+    if (pid == 0)
+        return 0; /* idle/shell can't call wait() yet - treat as non-claiming.
+                     Remove this special case once pid 0 gets a real SYS_WAIT
+                     path (stage 12c) and can legitimately claim zombies. */
 
-  process_t *p = process_lookup(pid);
-  if (!p)
-    return 0; /* never existed, or already freed */
+    process_t *p = process_lookup(pid);
+    if (!p)
+        return 0; /* never existed, or already freed */
 
-  return p->state != PROCESS_ZOMBIE && p->state != PROCESS_DEAD;
+    return p->state != PROCESS_ZOMBIE && p->state != PROCESS_DEAD;
 }
 
 /*
@@ -147,54 +147,54 @@ static int is_pid_alive(uint32_t pid) {
  * safe.
  */
 static void scheduler_reap_zombies(void) {
-  process_t *prev = NULL;
-  process_t *cur = zombie_head;
+    process_t *prev = NULL;
+    process_t *cur = zombie_head;
 
-  while (cur) {
-    if (!is_pid_alive(cur->parent_pid)) {
-      /* Parent is dead or missing, this is an orphan. Auto-reap resources
-       * safely */
-      process_t *orphan = cur;
-      cur = cur->next;
+    while (cur) {
+        if (!is_pid_alive(cur->parent_pid)) {
+            /* Parent is dead or missing, this is an orphan. Auto-reap resources
+             * safely */
+            process_t *orphan = cur;
+            cur = cur->next;
 
-      if (prev) {
-        prev->next = cur;
-      } else {
-        zombie_head = cur;
-      }
+            if (prev) {
+                prev->next = cur;
+            } else {
+                zombie_head = cur;
+            }
 
-      process_free(orphan);
-    } else {
-      /* Parent is still active; retain the zombie state for a future wait()
-       * call */
-      prev = cur;
-      cur = cur->next;
+            process_free(orphan);
+        } else {
+            /* Parent is still active; retain the zombie state for a future wait()
+             * call */
+            prev = cur;
+            cur = cur->next;
+        }
     }
-  }
 }
 
 void scheduler_init(void) {
-  queue_head = NULL;
-  queue_tail = NULL;
-  queue_size = 0;
+    queue_head = NULL;
+    queue_tail = NULL;
+    queue_size = 0;
 
-  /*
-   * process_init() (run just before this) sets current_process to the
-   * idle PCB directly, bypassing the queue entirely. If we don't enqueue
-   * it here, idle sits outside the round-robin set: the instant anything
-   * else is created and idle's first (1-tick) quantum expires, idle is
-   * marked READY but can never be picked again - the system gets stuck
-   * running whatever just preempted it, forever.
-   */
-  process_t *idle = process_current();
-  if (idle) {
-    scheduler_enqueue(idle);
-    idle->state = PROCESS_RUNNING; /* it really is running right now */
-  }
+    /*
+     * process_init() (run just before this) sets current_process to the
+     * idle PCB directly, bypassing the queue entirely. If we don't enqueue
+     * it here, idle sits outside the round-robin set: the instant anything
+     * else is created and idle's first (1-tick) quantum expires, idle is
+     * marked READY but can never be picked again - the system gets stuck
+     * running whatever just preempted it, forever.
+     */
+    process_t *idle = process_current();
+    if (idle) {
+        scheduler_enqueue(idle);
+        idle->state = PROCESS_RUNNING; /* it really is running right now */
+    }
 
-  vga_set_color(VGA_COLOR_LIGHT_GREEN);
-  kprint("[OK] Scheduler initialized (round-robin + priority)\n");
-  vga_set_color(VGA_COLOR_LIGHT_GREY);
+    vga_set_color(VGA_COLOR_LIGHT_GREEN);
+    kprint("[OK] Scheduler initialized (round-robin + priority)\n");
+    vga_set_color(VGA_COLOR_LIGHT_GREY);
 }
 
 process_t *scheduler_queue_head(void) { return queue_head; }
@@ -208,71 +208,71 @@ process_t *scheduler_queue_head(void) { return queue_head; }
  * gets N consecutive ticks before yielding.
  */
 static process_t *pick_next(void) {
-  if (!queue_head)
-    return NULL;
-
-  uint32_t checked = 0;
-
-  /* Rotate through the queue elements to find a task with a READY state status
-   */
-  while (checked < queue_size) {
-    process_t *next = queue_head;
-
-    /* Pop current head */
-    queue_head = next->next;
     if (!queue_head)
-      queue_tail = NULL;
-    next->next = NULL;
+        return NULL;
 
-    /* Re-enqueue immediately at the tail to maintain round-robin circulation */
-    if (!queue_head) {
-      queue_head = next;
-      queue_tail = next;
-    } else {
-      queue_tail->next = next;
-      queue_tail = next;
+    uint32_t checked = 0;
+
+    /* Rotate through the queue elements to find a task with a READY state status
+     */
+    while (checked < queue_size) {
+        process_t *next = queue_head;
+
+        /* Pop current head */
+        queue_head = next->next;
+        if (!queue_head)
+            queue_tail = NULL;
+        next->next = NULL;
+
+        /* Re-enqueue immediately at the tail to maintain round-robin circulation */
+        if (!queue_head) {
+            queue_head = next;
+            queue_tail = next;
+        } else {
+            queue_tail->next = next;
+            queue_tail = next;
+        }
+
+        checked++;
+
+        /* If this process is genuinely READY to execute, return it */
+        if (next->state == PROCESS_READY) {
+            return next;
+        }
     }
 
-    checked++;
-
-    /* If this process is genuinely READY to execute, return it */
-    if (next->state == PROCESS_READY) {
-      return next;
-    }
-  }
-
-  /* If nothing else is explicitly READY, return NULL (scheduler switches back
-   * to current or idle) */
-  return NULL;
+    /* If nothing else is explicitly READY, return NULL (scheduler switches back
+     * to current or idle) */
+    return NULL;
 }
 
 /* ---- do_switch ---- */
 
 static void do_switch(process_t *next) {
-  process_t *old = process_current();
-  if (old == next)
-    return; /* nothing to do */
+    process_t *old = process_current();
+    if (old == next)
+        return; /* nothing to do */
 
-  /* Update states */
-  if (old->state == PROCESS_RUNNING)
-    old->state = PROCESS_READY;
+    /* Update states */
+    if (old->state == PROCESS_RUNNING)
+        old->state = PROCESS_READY;
 
-  next->state = PROCESS_RUNNING;
-  next->ticks_remaining = next->priority; /* reset quantum */
+    next->state = PROCESS_RUNNING;
+    next->ticks_remaining = next->priority; /* reset quantum */
 
-  /*
-   * Point the TSS at next's kernel stack top. The CPU reads this
-   * (esp0/ss0) automatically on any ring 3 -> ring 0 transition
-   * (interrupt, exception, or int 0x80) - it has nothing to do with
-   * our own software context_switch below, but it MUST be correct
-   * before any process runs at CPL=3, or the first interrupt while
-   * that process is running will load a stale or zero stack pointer.
-   */
-  tss_set_kernel_stack(next->kernel_stack_top);
+    /*
+     * Point the TSS at next's kernel stack top. The CPU reads this
+     * (esp0/ss0) automatically on any ring 3 -> ring 0 transition
+     * (interrupt, exception, or int 0x80) - it has nothing to do with
+     * our own software context_switch below, but it MUST be correct
+     * before any process runs at CPL=3, or the first interrupt while
+     * that process is running will load a stale or zero stack pointer.
+     */
+    tss_set_kernel_stack(next->kernel_stack_top);
 
-  process_set_current(next);
-  context_switch(old, next);
-  /* execution resumes HERE when old is switched back in */
+    process_set_current(next);
+    context_switch(old, next);
+    /* execution resumes HERE when old is switched back in */
 }
 
 /* ---- scheduler_tick ---- */
@@ -284,46 +284,46 @@ static void do_switch(process_t *next) {
  * 3. If quantum expired, switch to next READY process.
  */
 void scheduler_tick(void) {
-  process_t *cur = process_current();
-  if (!cur)
-    return;
+    process_t *cur = process_current();
+    if (!cur)
+        return;
 
-  /* Free any processes that exited since the last tick. Safe here -
-     we're never running as the zombie itself at this point. */
-  scheduler_reap_zombies();
+    /* Free any processes that exited since the last tick. Safe here -
+       we're never running as the zombie itself at this point. */
+    scheduler_reap_zombies();
 
-  /* Wake any sleeping processes in the queue */
-  process_t *p = queue_head;
-  while (p) {
-    if (p->state == PROCESS_BLOCKED && p->sleep_ticks > 0) {
-      p->sleep_ticks--;
-      if (p->sleep_ticks == 0)
-        p->state = PROCESS_READY; /* will be picked up next tick */
+    /* Wake any sleeping processes in the queue */
+    process_t *p = queue_head;
+    while (p) {
+        if (p->state == PROCESS_BLOCKED && p->sleep_ticks > 0) {
+            p->sleep_ticks--;
+            if (p->sleep_ticks == 0)
+                p->state = PROCESS_READY; /* will be picked up next tick */
+        }
+        p = p->next;
     }
-    p = p->next;
-  }
 
-  /* Decrement current process quantum */
-  if (cur->ticks_remaining > 0)
-    cur->ticks_remaining--;
+    /* Decrement current process quantum */
+    if (cur->ticks_remaining > 0)
+        cur->ticks_remaining--;
 
-  /* If quantum expired and there's something else to run, switch */
-  if (cur->ticks_remaining == 0 && queue_size > 0) {
-    process_t *next = pick_next();
-    if (next && next != cur)
-      do_switch(next);
-    else
-      cur->ticks_remaining = cur->priority; /* reset, run again */
-  }
+    /* If quantum expired and there's something else to run, switch */
+    if (cur->ticks_remaining == 0 && queue_size > 0) {
+        process_t *next = pick_next();
+        if (next && next != cur)
+            do_switch(next);
+        else
+            cur->ticks_remaining = cur->priority; /* reset, run again */
+    }
 }
 
 /* ---- scheduler_yield ---- */
 
 void scheduler_yield(void) {
-  process_t *cur = process_current();
-  process_t *next = pick_next();
+    process_t *cur = process_current();
+    process_t *next = pick_next();
 
-  if (!next || next == cur)
-    return;
-  do_switch(next);
+    if (!next || next == cur)
+        return;
+    do_switch(next);
 }

@@ -6,9 +6,9 @@
 typedef void (*cmd_fn_t)(int argc, char **argv);
 
 typedef struct {
-  const char *name;
-  const char *help;
-  cmd_fn_t fn;
+    const char *name;
+    const char *help;
+    cmd_fn_t fn;
 } command_t;
 
 extern const command_t commands[];

@@ -15,9 +15,9 @@
 #define SYS_OPEN 3  /* sys_open(path)           -> fd, or -1     */
 #define SYS_READ 4  /* sys_read(fd, buf, len)   -> bytes read    */
 #define SYS_CLOSE 5 /* sys_close(fd)            -> 0, or -1      */
-#define SYS_FORK                                                               \
-  6 /* sys_fork()               -> child pid (parent),                         \
-                                    0 (child), or -1  */
+#define SYS_FORK                                                                                   \
+    6 /* sys_fork()               -> child pid (parent),                                           \
+                                      0 (child), or -1  */
 
 /* Returns the value to be placed in the caller's eax after iret. */
 uint32_t syscall_handler(registers_t *r);
